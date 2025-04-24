@@ -1,7 +1,8 @@
 services:
   nim-llm:
     container_name: nim-llm-ms
-    image: nvcr.io/nim/google/gemma-2-9b-it:1.4.0
+    # image: nvcr.io/nim/google/gemma-2-9b-it:1.4.0
+    image: nvcr.io/nim/${APP_LLM_MODELNAME:-"meta/llama-3.1-70b-instruct-pb24h2"}:${LLM_TAG:-"latest"}
     volumes:
     - ${MODEL_DIRECTORY:-./}:/opt/nim/.cache
     user: "${USERID}"
@@ -11,7 +12,7 @@ services:
     - "8000"
     environment:
       NGC_API_KEY: ${NVIDIA_API_KEY}
-    shm_size: 20gb
+    shm_size: 95gb
     deploy:
       resources:
         reservations:

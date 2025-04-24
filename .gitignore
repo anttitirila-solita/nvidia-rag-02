@@ -20,3 +20,6 @@ docs/_*
 
 # Notebook checkpoints
 notebooks/.ipynb_checkpoints
+
+# Env variables
+.env
