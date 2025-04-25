@@ -62,6 +62,8 @@ docker compose -f deploy/compose/docker-compose-ingestor-server.yaml up -d
 echo "Starting RAG services..."
 docker compose -f deploy/compose/docker-compose-rag-server.yaml up -d
 
+sleep 10
+
 echo "Checking RAG service health..."
 curl -X 'GET' 'http://localhost:8081/v1/health?check_dependencies=true' -H 'accept: application/json'
 
