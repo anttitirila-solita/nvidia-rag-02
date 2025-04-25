@@ -33,7 +33,7 @@ services:
             - driver: nvidia
               capabilities: ["gpu"]
               # count: ${INFERENCE_GPU_COUNT:-all}
-              device_ids: ['${VECTORSTORE_GPU_DEVICE_ID:-0}']
+              device_ids: ['${VECTORSTORE_GPU_DEVICE_ID:-2}']
 
   etcd:
     container_name: milvus-etcd

@@ -35,24 +35,27 @@ services:
       VECTOR_DB_TOPK: 100
 
       ##===LLM Model specific configurations===
-      APP_LLM_MODELNAME: ${APP_LLM_MODELNAME:-"meta/llama-3.1-8b-instruct"}
+      # APP_LLM_MODELNAME: ${APP_LLM_MODELNAME:-"google/gemma-2-9b-it"}
+      APP_LLM_MODELNAME: ${APP_LLM_MODELNAME:-"meta/llama-3.1-70b-instruct-pb24h2"}
+
       # url on which llm model is hosted. If "", Nvidia hosted API is used
       APP_LLM_SERVERURL: ${APP_LLM_SERVERURL-"nim-llm:8000"}
 
       ##===Query Rewriter Model specific configurations===
-      APP_QUERYREWRITER_MODELNAME: ${APP_QUERYREWRITER_MODELNAME:-"meta/llama-3.1-8b-instruct"}
+      # APP_QUERYREWRITER_MODELNAME: ${APP_QUERYREWRITER_MODELNAME:-"google/gemma-2-9b-it"}
+      APP_QUERYREWRITER_MODELNAME: ${APP_QUERYREWRITER_MODELNAME:-"meta/llama-3.1-70b-instruct-pb24h2"}
       # url on which query rewriter model is hosted. If "", Nvidia hosted API is used
       APP_QUERYREWRITER_SERVERURL: ${APP_QUERYREWRITER_SERVERURL-"nim-llm-llama-8b-ms:8000"}
 
       ##===Embedding Model specific configurations===
       # url on which embedding model is hosted. If "", Nvidia hosted API is used
       APP_EMBEDDINGS_SERVERURL: ${APP_EMBEDDINGS_SERVERURL-"nemoretriever-embedding-ms:8000"}
-      APP_EMBEDDINGS_MODELNAME: ${APP_EMBEDDINGS_MODELNAME:-nvidia/llama-3.2-nv-embedqa-1b-v2}
+      APP_EMBEDDINGS_MODELNAME: ${APP_EMBEDDINGS_MODELNAME:-nvidia/nv-embedqa-e5-v5}
 
       ##===Reranking Model specific configurations===
       # url on which ranking model is hosted. If "", Nvidia hosted API is used
       APP_RANKING_SERVERURL: ${APP_RANKING_SERVERURL-"nemoretriever-ranking-ms:8000"}
-      APP_RANKING_MODELNAME: ${APP_RANKING_MODELNAME:-"nvidia/llama-3.2-nv-rerankqa-1b-v2"}
+      APP_RANKING_MODELNAME: ${APP_RANKING_MODELNAME:-"nvidia/nv-rerankqa-mistral-4b-v3"}
       ENABLE_RERANKER: ${ENABLE_RERANKER:-True}
 
       NVIDIA_API_KEY: ${NVIDIA_API_KEY:?"NVIDIA_API_KEY is required"}
@@ -125,11 +128,11 @@ services:
       dockerfile: ./Dockerfile
       args:
         # Model name for LLM
-        NEXT_PUBLIC_MODEL_NAME: ${APP_LLM_MODELNAME:-meta/llama-3.1-8b-instruct}
+        NEXT_PUBLIC_MODEL_NAME: ${APP_LLM_MODELNAME:-google/gemma-2-9b-it}
         # Model name for embeddings
-        NEXT_PUBLIC_EMBEDDING_MODEL: ${APP_EMBEDDINGS_MODELNAME:-nvidia/llama-3.2-nv-embedqa-1b-v2}
+        NEXT_PUBLIC_EMBEDDING_MODEL: ${APP_EMBEDDINGS_MODELNAME:-nvidia/nv-embedqa-e5-v5}
         # Model name for reranking
-        NEXT_PUBLIC_RERANKER_MODEL: ${APP_RANKING_MODELNAME:-nvidia/llama-3.2-nv-rerankqa-1b-v2}
+        NEXT_PUBLIC_RERANKER_MODEL: ${APP_RANKING_MODELNAME:-nvidia/nv-rerankqa-mistral-4b-v3}
         # URL for rag server container
         NEXT_PUBLIC_CHAT_BASE_URL: "http://rag-server:8081/v1"
         # URL for ingestor container
