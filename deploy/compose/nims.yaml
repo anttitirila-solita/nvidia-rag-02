@@ -1,7 +1,7 @@
 services:
   nim-llm:
     container_name: nim-llm-ms
-    image: nvcr.io/nim/${APP_LLM_MODELNAME:-"meta/llama-3.1-8b-instruct"}:${LLM_TAG:-"latest"}
+    image: nvcr.io/nim/${APP_LLM_MODELNAME:-meta/llama-3.1-8b-instruct}:${LLM_TAG:-latest}
     volumes:
     - ${MODEL_DIRECTORY:-./}:/opt/nim/.cache
     user: "${USERID}"
@@ -11,14 +11,14 @@ services:
     - "8000"
     environment:
       NGC_API_KEY: ${NVIDIA_API_KEY}
-    shm_size: 20gb
+    shm_size: 10GB
     deploy:
       resources:
         reservations:
           devices:
             - driver: nvidia
               #count: ${INFERENCE_GPU_COUNT:-all}
-              device_ids: ['${LLM_MS_GPU_ID:-0}']
+              device_ids: ['${LLM_MS_GPU_ID:-2,3}']
               capabilities: [gpu]
     healthcheck:
       test: ["CMD", "python3", "-c", "import requests; requests.get('http://localhost:8000/v1/health/ready')"]
@@ -79,7 +79,7 @@ services:
           devices:
             - driver: nvidia
               # count: ${INFERENCE_GPU_COUNT:-all}
-              device_ids: ['${RANKING_MS_GPU_ID:-1}']
+              device_ids: ['${RANKING_MS_GPU_ID:-0}']
               capabilities: [gpu]
     profiles: ["", "rag"]
 
@@ -111,7 +111,7 @@ services:
         reservations:
           devices:
             - driver: nvidia
-              device_ids: ['${YOLOX_MS_GPU_ID:-1}']
+              device_ids: ['${YOLOX_MS_GPU_ID:-0}']
               capabilities: [gpu]
     runtime: nvidia
     profiles: ["", "ingest"]
@@ -135,7 +135,7 @@ services:
         reservations:
           devices:
             - driver: nvidia
-              device_ids: ['${YOLOX_GRAPHICS_MS_GPU_ID:-1}']
+              device_ids: ['${YOLOX_GRAPHICS_MS_GPU_ID:-0}']
               capabilities: [gpu]
     runtime: nvidia
     profiles: ["", "ingest"]
@@ -152,13 +152,13 @@ services:
       - NIM_TRITON_LOG_VERBOSE=1
       - NGC_API_KEY=${NVIDIA_API_KEY:-nvidiaapikey}
       - CUDA_VISIBLE_DEVICES=0
-      - NIM_TRITON_MODEL_BATCH_SIZE=${TABLE_STRUCTURE_BATCH_SIZE:-1}
+      - NIM_TRITON_MODEL_BATCH_SIZE=${TABLE_STRUCTURE_BATCH_SIZE:-0}
     deploy:
       resources:
         reservations:
           devices:
             - driver: nvidia
-              device_ids:  ['${YOLOX_TABLE_MS_GPU_ID:-1}']
+              device_ids:  ['${YOLOX_TABLE_MS_GPU_ID:-0}']
               capabilities: [gpu]
     runtime: nvidia
     profiles: ["", "ingest"]
@@ -182,7 +182,7 @@ services:
         reservations:
           devices:
             - driver: nvidia
-              device_ids:  ['${PADDLE_MS_GPU_ID:-1}']
+              device_ids:  ['${PADDLE_MS_GPU_ID:-0}']
               capabilities: [gpu]
     runtime: nvidia
     profiles: ["", "ingest"]
@@ -206,7 +206,7 @@ services:
         reservations:
           devices:
             - driver: nvidia
-              device_ids: ['${NEMORETRIEVER_PARSE_MS_GPU_ID:-1}']
+              device_ids: ['${NEMORETRIEVER_PARSE_MS_GPU_ID:-0}']
               capabilities: [gpu]
     runtime: nvidia
     profiles: ["nemoretriever-parse"]
@@ -234,7 +234,7 @@ services:
           devices:
             - driver: nvidia
               # count: ${INFERENCE_GPU_COUNT:-all}
-              device_ids: ['${VLM_MS_GPU_ID:-1}']
+              device_ids: ['${VLM_MS_GPU_ID:-0}']
               capabilities: [gpu]
     profiles: ["vlm"]
 
@@ -257,7 +257,7 @@ services:
           devices:
             - driver: nvidia
               #count: ${INFERENCE_GPU_COUNT:-all}
-              device_ids: ['${LLM_8B_MS_GPU_ID:-1}']
+              device_ids: ['${LLM_8B_MS_GPU_ID:-0}']
               capabilities: [gpu]
     healthcheck:
       test: ["CMD", "python3", "-c", "import requests; requests.get('http://localhost:8000/v1/health/ready')"]

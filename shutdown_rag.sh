@@ -2,6 +2,8 @@
 
 set -e
 
+export USERID=$(id -u) 
+
 echo "Shutting down RAG services..."
 docker compose -f deploy/compose/docker-compose-rag-server.yaml down
 

@@ -72,4 +72,5 @@ services:
 
 networks:
   default:
+    external: true
     name: nvidia-rag

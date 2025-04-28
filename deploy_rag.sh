@@ -26,7 +26,9 @@ export MODEL_DIRECTORY
 
 if [ "$USE_ON_PREM" = true ]; then
   echo "Deploying on-prem NIMs..."
-  export LLM_MS_GPU_ID
+
+  export LLM_MS_GPU_ID=2,3
+
   USERID=$(id -u) docker compose -f deploy/compose/nims.yaml up -d
 
   echo "Waiting for 'nim-llm-ms' container to be healthy..."
@@ -40,6 +42,27 @@ if [ "$USE_ON_PREM" = true ]; then
       sleep 10
     fi
   done
+
+  # --- Deploy services ---
+  echo "Starting vector DB containers..."
+  docker compose -f deploy/compose/vectordb.yaml up -d
+
+  echo "Starting ingestion services..."
+  docker compose -f deploy/compose/docker-compose-ingestor-server.yaml up -d
+
+  echo "Starting RAG services..."
+  docker compose -f deploy/compose/docker-compose-rag-server.yaml up -d
+
+  sleep 10
+
+  echo "Checking RAG service health..."
+  curl -X 'GET' 'http://localhost:8081/v1/health?check_dependencies=true' -H 'accept: application/json'
+
+  echo "Deployment complete."
+  docker ps --format "table {{.ID}}\t{{.Names}}\t{{.Status}}"
+
+  echo "Access RAG Playground at: http://localhost:8090"
+
 else
   echo "Using NVIDIA hosted models..."
   export APP_EMBEDDINGS_SERVERURL
@@ -52,22 +75,3 @@ else
   export YOLOX_TABLE_STRUCTURE_HTTP_ENDPOINT
 fi
 
-# --- Deploy services ---
-echo "Starting vector DB containers..."
-docker compose -f deploy/compose/vectordb.yaml up -d
-
-echo "Starting ingestion services..."
-docker compose -f deploy/compose/docker-compose-ingestor-server.yaml up -d
-
-echo "Starting RAG services..."
-docker compose -f deploy/compose/docker-compose-rag-server.yaml up -d
-
-sleep 10
-
-echo "Checking RAG service health..."
-curl -X 'GET' 'http://localhost:8081/v1/health?check_dependencies=true' -H 'accept: application/json'
-
-echo "Deployment complete."
-docker ps --format "table {{.ID}}\t{{.Names}}\t{{.Status}}"
-
-echo "Access RAG Playground at: http://localhost:8090"
