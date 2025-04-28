@@ -69,7 +69,7 @@ services:
       ENABLE_CITATIONS: ${ENABLE_CITATIONS:-True}
 
       # Log level for server, supported level NOTSET, DEBUG, INFO, WARN, ERROR, CRITICAL
-      LOGLEVEL: ${LOGLEVEL:-INFO}
+      LOGLEVEL: ${LOGLEVEL:-DEBUG}
 
     ports:
       - "8082:8082"

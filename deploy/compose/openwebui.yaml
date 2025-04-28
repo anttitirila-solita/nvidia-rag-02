@@ -1,0 +1,17 @@
+
+services:
+  open-webui:
+    container_name: open-webui
+    image: ghcr.io/open-webui/open-webui:${WEBUI_DOCKER_TAG:-0.6.5}
+    volumes:
+      - /opt/open-webui:/app/backend/data
+    ports:
+      - "3000:8080"
+    environment:
+      - WEBUI_SECRET_KEY=${WEBUI_KEY:-m438ty4g98yhsv!_QW3Bg}
+      - OPENAI_API_BASE_URL"=${OPENAI_API_BASE_URL:-http://localhost:8000/v1}
+
+networks:
+  default:
+    external: true
+    name: nvidia-rag
