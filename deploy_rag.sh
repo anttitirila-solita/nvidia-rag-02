@@ -27,9 +27,7 @@ export MODEL_DIRECTORY
 if [ "$USE_ON_PREM" = true ]; then
   echo "Deploying on-prem NIMs..."
 
-  export LLM_MS_GPU_ID=2,3
-
-  USERID=$(id -u) docker compose -f deploy/compose/nims.yaml up -d
+  USERID=$(id -u) docker compose -f deploy/compose/nims.yaml up -d --build
 
   echo "Waiting for 'nim-llm-ms' container to be healthy..."
   while true; do
@@ -45,13 +43,16 @@ if [ "$USE_ON_PREM" = true ]; then
 
   # --- Deploy services ---
   echo "Starting vector DB containers..."
-  docker compose -f deploy/compose/vectordb.yaml up -d
+  docker compose -f deploy/compose/vectordb.yaml up -d --build
 
   echo "Starting ingestion services..."
-  docker compose -f deploy/compose/docker-compose-ingestor-server.yaml up -d
+  docker compose -f deploy/compose/docker-compose-ingestor-server.yaml up -d --build
 
   echo "Starting RAG services..."
-  docker compose -f deploy/compose/docker-compose-rag-server.yaml up -d
+  docker compose -f deploy/compose/docker-compose-rag-server.yaml up -d --build
+
+  echo "Starting Open WebUI..."
+  docker compose -f deploy/compose/openwebui.yaml up -d
 
   sleep 10
 
@@ -62,6 +63,7 @@ if [ "$USE_ON_PREM" = true ]; then
   docker ps --format "table {{.ID}}\t{{.Names}}\t{{.Status}}"
 
   echo "Access RAG Playground at: http://localhost:8090"
+  echo "Access Open WebUI at: http://localhost:8999"
 
 else
   echo "Using NVIDIA hosted models..."
