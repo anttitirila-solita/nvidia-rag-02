@@ -128,46 +128,68 @@ class UnstructuredRAG(BaseExample):
                 ) from e
             raise APIError("Failed to upload document. " + str(e), code=500) from e
 
+    @staticmethod
+    def flatten_messages(system_prompt: str, chat_history: List[tuple], user_query: str) -> str:
+        """
+        Combine system prompt, chat history, and user query into a single plain text prompt.
+        """
+        prompt_parts = []
+        if system_prompt:
+            prompt_parts.append(system_prompt.strip())
+
+        for role, content in chat_history:
+            if role == "user":
+                prompt_parts.append(f"User: {content.strip()}")
+            elif role == "assistant":
+                prompt_parts.append(f"Assistant: {content.strip()}")
+
+        if user_query:
+            prompt_parts.append(f"User: {user_query.strip()}")
+
+        return "\n\n".join(prompt_parts)
+
     def llm_chain(self, query: str, chat_history: List[Dict[str, Any]], **kwargs) -> Generator[str, None, None]:
         """Execute a simple LLM chain using the components defined above.
         It's called when the `/generate` API is invoked with `use_knowledge_base` set to `False`.
-
-        Args:
-            query (str): Query to be answered by llm.
-            chat_history (List[Message]): Conversation history between user and chain.
-            kwargs: ?
         """
         try:
             logger.info("Using llm to generate response directly without knowledge base.")
-            system_message = []
+            system_prompt = ""
             conversation_history = []
             user_message = []
-            system_prompt = ""
-
+            
+            # Load system prompt template
             system_prompt += prompts.get("chat_template", "")
-
+            
             for message in chat_history:
-                if message.role ==  "system":
+                if message.role == "system":
                     system_prompt = system_prompt + " " + message.content
                 else:
                     conversation_history.append((message.role, message.content))
 
-            system_message = [("system", system_prompt)]
-
-            logger.info("Query is: %s", query)
-            if query is not None and query != "":
+            if query:
                 user_message = [("user", "{question}")]
 
-            # Prompt template with system message, conversation history and user query
-            message = system_message + conversation_history + user_message
+            model_name = os.getenv("APP_LLM_MODELNAME", "").lower()
 
-            self.print_conversation_history(message, query)
-
-            prompt_template = ChatPromptTemplate.from_messages(message)
             llm = get_llm(**kwargs)
 
-            chain = prompt_template | llm | StreamingFilterThinkParser | StrOutputParser()
-            return chain.stream({"question": query}, config={'run_name':'llm-stream'})
+            if model_name.startswith("google"):
+                logger.info("Detected Google model - flattening messages for LLM input.")
+                final_prompt = self.flatten_messages(system_prompt, conversation_history, query)
+                
+                chain = llm | StreamingFilterThinkParser | StrOutputParser()
+                return chain.stream(final_prompt, config={'run_name': 'llm-stream'})
+            else:
+                logger.info("Detected non-Google model - using ChatPromptTemplate with roles.")
+                message = [("system", system_prompt)] + conversation_history + user_message
+                
+                self.print_conversation_history(message, query)
+
+                prompt_template = ChatPromptTemplate.from_messages(message)
+                chain = prompt_template | llm | StreamingFilterThinkParser | StrOutputParser()
+                return chain.stream({"question": query}, config={'run_name': 'llm-stream'})
+
         except ConnectTimeout as e:
             logger.warning("Connection timed out while making a request to the LLM endpoint: %s", e)
             return iter(["Connection timed out while making a request to the NIM endpoint. Verify if the NIM server is available."])
@@ -185,30 +207,21 @@ class UnstructuredRAG(BaseExample):
             else:
                 return iter([f"Failed to generate RAG chain response. {str(e)}"])
 
-    def rag_chain(  # pylint: disable=arguments-differ
-            self,
-            query: str,
-            chat_history: List[Dict[str, Any]],
-            reranker_top_k: int,
-            vdb_top_k: int,
-            collection_name: str = "",
-            **kwargs) -> Generator[str, None, None]:
+    def rag_chain(
+        self,
+        query: str,
+        chat_history: List[Dict[str, Any]],
+        reranker_top_k: int,
+        vdb_top_k: int,
+        collection_name: str = "",
+        **kwargs,
+    ) -> Generator[str, None, None]:
         """Execute a Retrieval Augmented Generation chain using the components defined above.
         It's called when the `/generate` API is invoked with `use_knowledge_base` set to `True`.
-
-        Args:
-            query (str): Query to be answered by llm.
-            chat_history (List[Message]): Conversation history between user and chain.
-            top_n (int): Fetch n document to generate.
-            collection_name (str): Name of the collection to be searched from vectorstore.
-            kwargs: ?
         """
-
-        if os.environ.get("ENABLE_MULTITURN", "false").lower() == "true":
-            return self.rag_chain_with_multiturn(query=query, chat_history=chat_history, reranker_top_k=reranker_top_k, vdb_top_k=vdb_top_k, collection_name=collection_name, **kwargs)
-        logger.info("Using rag to generate response from document for the query: %s", query)
-
         try:
+            logger.info("Using rag to generate response from document for the query: %s", query)
+
             document_embedder = get_embedding_model(model=kwargs.get("embedding_model"), url=kwargs.get("embedding_endpoint"))
             vs = get_vectorstore(document_embedder, collection_name, kwargs.get("vdb_endpoint"))
             if vs is None:
@@ -218,111 +231,107 @@ class UnstructuredRAG(BaseExample):
             ranker = get_ranking_model(model=kwargs.get("reranker_model"), url=kwargs.get("reranker_endpoint"), top_n=reranker_top_k)
             top_k = vdb_top_k if ranker and kwargs.get("enable_reranker") else reranker_top_k
             logger.info("Setting retriever top k as: %s.", top_k)
-            retriever = vs.as_retriever(search_kwargs={"k": top_k})  # milvus does not support similarily threshold
+            retriever = vs.as_retriever(search_kwargs={"k": top_k})
 
             system_prompt = ""
             conversation_history = []
+
+            # System prompt
             system_prompt += prompts.get("rag_template", "")
 
             for message in chat_history:
-                if message.role ==  "system":
+                if message.role == "system":
                     system_prompt = system_prompt + " " + message.content
+                else:
+                    conversation_history.append((message.role, message.content))
 
-            system_message = [("system", system_prompt)]
-            user_message = [("user", "{question}")]
+            model_name = os.getenv("APP_LLM_MODELNAME", "").lower()
 
-            # Prompt template with system message, conversation history and user query
-            message = system_message + conversation_history + user_message
-            self.print_conversation_history(message)
-            prompt = ChatPromptTemplate.from_messages(message)
-            # Get relevant documents with optional reflection
+            # Get relevant documents
             if os.environ.get("ENABLE_REFLECTION", "false").lower() == "true":
                 max_loops = int(os.environ.get("MAX_REFLECTION_LOOP", 3))
                 reflection_counter = ReflectionCounter(max_loops)
-                
+
                 context_to_show, is_relevant = check_context_relevance(
-                    query, 
-                    retriever, 
-                    ranker,
-                    reflection_counter
+                    query, retriever, ranker, reflection_counter
                 )
-                
+
                 if not is_relevant:
                     logger.warning("Could not find sufficiently relevant context after maximum attempts")
             else:
                 if ranker and kwargs.get("enable_reranker"):
                     logger.info(
-                        "Narrowing the collection from %s results and further narrowing it to "
-                        "%s with the reranker for rag chain.",
+                        "Narrowing the collection from %s results and further narrowing it to %s with the reranker for RAG chain.",
                         top_k,
-                        reranker_top_k)
+                        reranker_top_k,
+                    )
                     logger.info("Setting ranker top n as: %s.", reranker_top_k)
+
                     context_reranker = RunnableAssign({
-                        "context":
-                            lambda input: ranker.compress_documents(query=input['question'], documents=input['context'])
+                        "context": lambda input: ranker.compress_documents(query=input["question"], documents=input["context"])
                     })
-                    # Create a chain with retriever and reranker
+
                     retriever = {"context": retriever} | RunnableAssign({"context": lambda input: input["context"]})
-                    docs = retriever.invoke(query, config={'run_name':'retriever'})
-                    docs = context_reranker.invoke({"context": docs.get("context", []), "question": query}, config={'run_name':'context_reranker'})
+                    docs = retriever.invoke(query, config={"run_name": "retriever"})
+                    docs = context_reranker.invoke({"context": docs.get("context", []), "question": query}, config={"run_name": "context_reranker"})
                     context_to_show = docs.get("context", [])
-                    # Normalize scores to 0-1 range
                     context_to_show = normalize_relevance_scores(context_to_show)
-                    # Remove metadata from context
-                    logger.debug("Document Retrieved: %s", docs)
                 else:
                     context_to_show = retriever.invoke(query)
+
             docs = [format_document_with_source(d) for d in context_to_show]
-            chain = prompt | llm | StreamingFilterThinkParser | StrOutputParser()
-                
-            # Check response groundedness if we still have reflection iterations available
-            if os.environ.get("ENABLE_REFLECTION", "false").lower() == "true" and reflection_counter.remaining > 0:
-                initial_response = chain.invoke({"question": query, "context": docs})
-                final_response, is_grounded = check_response_groundedness(
-                    initial_response, 
-                    docs,
-                    reflection_counter
-                )
-                if not is_grounded:
-                    logger.warning("Could not generate sufficiently grounded response after %d total reflection attempts",
-                                    reflection_counter.current_count)
-                return iter([final_response]), context_to_show
+
+            if model_name.startswith("google"):
+                logger.info("Detected Google model - flattening messages for RAG input.")
+                user_query = query
+                context_text = "\n\n".join(doc.page_content for doc in docs)
+                final_prompt = self.flatten_messages(system_prompt, conversation_history, user_query)
+                final_prompt += f"\n\nContext:\n{context_text}"
+
+                chain = llm | StreamingFilterThinkParser | StrOutputParser()
+                return chain.stream(final_prompt, config={"run_name": "llm-stream"}), context_to_show
             else:
-                return chain.stream({"question": query, "context": docs}, config={'run_name':'llm-stream'}), context_to_show
+                logger.info("Detected non-Google model - using ChatPromptTemplate with roles.")
+                message = [("system", system_prompt)] + conversation_history + [("user", "{question}")]
+                
+                self.print_conversation_history(message)
+
+                prompt_template = ChatPromptTemplate.from_messages(message)
+                chain = prompt_template | llm | StreamingFilterThinkParser | StrOutputParser()
+                return chain.stream({"question": query, "context": docs}, config={"run_name": "llm-stream"}), context_to_show
+
         except ConnectTimeout as e:
             logger.warning("Connection timed out while making a request to the LLM endpoint: %s", e)
-            return iter(["Connection timed out while making a request to the NIM endpoint. Verify if the NIM server is available."])
+            return iter(["Connection timed out while making a request to the NIM endpoint. Verify if the NIM server is available."]), []
 
-        except requests.exceptions.ConnectionError as e:
-            if "HTTPConnectionPool" in str(e):
-                logger.warning("Connection pool error while connecting to service: %s", e)
-                return iter(["Connection error: Failed to connect to service. Please verify if all required services are running and accessible."])
         except Exception as e:
             logger.warning("Failed to generate response due to exception %s", e)
             print_exc()
 
             if "[403] Forbidden" in str(e) and "Invalid UAM response" in str(e):
                 logger.warning("Authentication or permission error: Verify the validity and permissions of your NVIDIA API key.")
-                return iter(["Authentication or permission error: Verify the validity and permissions of your NVIDIA API key."])
+                return iter(["Authentication or permission error: Verify the validity and permissions of your NVIDIA API key."]), []
             elif "[404] Not Found" in str(e):
                 logger.warning("Please verify the API endpoint and your payload. Ensure that the model name is valid.")
-                return iter(["Please verify the API endpoint and your payload. Ensure that the model name is valid."])
+                return iter(["Please verify the API endpoint and your payload. Ensure that the model name is valid."]), []
             else:
-                return iter([f"Failed to generate RAG chain response. {str(e)}"])
+                return iter([f"Failed to generate RAG chain response. {str(e)}"]), []
 
 
-    def rag_chain_with_multiturn(self,
-                                 query: str,
-                                 chat_history: List[Dict[str, Any]],
-                                 reranker_top_k: int,
-                                 vdb_top_k: int,
-                                 collection_name: str,
-                                 **kwargs) -> Generator[str, None, None]:
-        """Execute a Retrieval Augmented Generation chain using the components defined above."""
-
-        logger.info("Using multiturn rag to generate response from document for the query: %s", query)
+    def rag_chain_with_multiturn(
+        self,
+        query: str,
+        chat_history: List[Dict[str, Any]],
+        reranker_top_k: int,
+        vdb_top_k: int,
+        collection_name: str,
+        **kwargs,
+    ) -> Generator[str, None, None]:
+        """Execute a Retrieval Augmented Generation chain using the components defined above (multi-turn)."""
 
         try:
+            logger.info("Using multiturn rag to generate response from document for the query: %s", query)
+
             document_embedder = get_embedding_model(model=kwargs.get("embedding_model"), url=kwargs.get("embedding_endpoint"))
             vs = get_vectorstore(document_embedder, collection_name, kwargs.get("vdb_endpoint"))
             if vs is None:
@@ -332,134 +341,116 @@ class UnstructuredRAG(BaseExample):
             ranker = get_ranking_model(model=kwargs.get("reranker_model"), url=kwargs.get("reranker_endpoint"), top_n=reranker_top_k)
             top_k = vdb_top_k if ranker and kwargs.get("enable_reranker") else reranker_top_k
             logger.info("Setting retriever top k as: %s.", top_k)
-            retriever = vs.as_retriever(search_kwargs={"k": top_k})  # milvus does not support similarily threshold
+            retriever = vs.as_retriever(search_kwargs={"k": top_k})
 
-            # conversation is tuple so it should be multiple of two
-            # -1 is to keep last k conversation
+            # Truncate conversation history if needed
             history_count = int(os.environ.get("CONVERSATION_HISTORY", 15)) * 2 * -1
             chat_history = chat_history[history_count:]
+
             system_prompt = ""
             conversation_history = []
+
             system_prompt += prompts.get("rag_template", "")
 
             for message in chat_history:
-                if message.role ==  "system":
+                if message.role == "system":
                     system_prompt = system_prompt + " " + message.content
                 else:
                     conversation_history.append((message.role, message.content))
 
-            system_message = [("system", system_prompt)]
+            model_name = os.getenv("APP_LLM_MODELNAME", "").lower()
+
             retriever_query = query
             if chat_history:
                 if kwargs.get("enable_query_rewriting"):
-                    # Based on conversation history recreate query for better document retrieval
-                    contextualize_q_system_prompt = (
-                        "Given a chat history and the latest user question "
-                        "which might reference context in the chat history, "
-                        "formulate a standalone question which can be understood "
-                        "without the chat history. Do NOT answer the question, "
-                        "just reformulate it if needed and otherwise return it as is."
+                    logger.info("Rewriting query using query rewriter model...")
+                    contextualize_q_system_prompt = prompts.get(
+                        "query_rewriter_prompt",
+                        "Given a chat history and the latest user question, formulate a standalone question."
                     )
-                    query_rewriter_prompt = prompts.get("query_rewriter_prompt", contextualize_q_system_prompt)
-                    contextualize_q_prompt = ChatPromptTemplate.from_messages(
-                        [("system", query_rewriter_prompt), MessagesPlaceholder("chat_history"), ("human", "{input}"),]
-                    )
+                    contextualize_q_prompt = ChatPromptTemplate.from_messages([
+                        ("system", contextualize_q_system_prompt),
+                        MessagesPlaceholder("chat_history"),
+                        ("human", "{input}"),
+                    ])
                     q_prompt = contextualize_q_prompt | query_rewriter_llm | StreamingFilterThinkParser | StrOutputParser()
-                    # query to be used for document retrieval
-                    logger.info("Query rewriter prompt: %s", contextualize_q_prompt)
-                    retriever_query = q_prompt.invoke({"input": query, "chat_history": conversation_history}, config={'run_name':'query-rewriter'})
-                    logger.info("Rewritten Query: %s %s", retriever_query, len(retriever_query))
-                    if retriever_query.replace('"', "'") == "''" or len(retriever_query) == 0:
-                        return iter([""])
+                    retriever_query = q_prompt.invoke({"input": query, "chat_history": conversation_history}, config={"run_name": "query-rewriter"})
+                    logger.info("Rewritten Query: %s", retriever_query)
+                    if retriever_query.replace('"', "'") == "''" or len(retriever_query.strip()) == 0:
+                        return iter([""]), []
                 else:
-                    # Use previous user queries and current query to form a single query for document retrieval
                     user_queries = [msg.content for msg in chat_history if msg.role == "user"]
-                    # TODO: Find a better way to join this when queries already have punctuation
                     retriever_query = ". ".join([*user_queries, query])
                     logger.info("Combined retriever query: %s", retriever_query)
 
-            # Prompt for response generation based on context
-            user_message = [("user", "{question}")]
-            message = system_message + conversation_history + user_message
-            self.print_conversation_history(message)
-            prompt = ChatPromptTemplate.from_messages(message)
-            # Get relevant documents with optional reflection
+            # Retrieve documents
             if os.environ.get("ENABLE_REFLECTION", "false").lower() == "true":
                 max_loops = int(os.environ.get("MAX_REFLECTION_LOOP", 3))
                 reflection_counter = ReflectionCounter(max_loops)
-                
+
                 context_to_show, is_relevant = check_context_relevance(
-                    retriever_query, 
-                    retriever, 
-                    ranker,
-                    reflection_counter
+                    retriever_query, retriever, ranker, reflection_counter
                 )
-                
+
                 if not is_relevant:
-                    logger.warning("Could not find sufficiently relevant context after %d attempts", 
-                                  reflection_counter.current_count)
+                    logger.warning("Could not find sufficiently relevant context after %d reflection attempts", reflection_counter.current_count)
             else:
                 if ranker and kwargs.get("enable_reranker"):
                     logger.info(
-                        "Narrowing the collection from %s results and further narrowing it to "
-                        "%s with the reranker for rag chain.",
+                        "Narrowing collection from %s results and further narrowing to %s with reranker for multi-turn rag chain.",
                         top_k,
-                        settings.retriever.top_k)
-                    logger.info("Setting ranker top n as: %s.", reranker_top_k)
+                        reranker_top_k,
+                    )
                     context_reranker = RunnableAssign({
-                        "context":
-                            lambda input: ranker.compress_documents(query=input['question'], documents=input['context'])
+                        "context": lambda input: ranker.compress_documents(query=input["question"], documents=input["context"])
                     })
-
                     retriever = {"context": retriever} | RunnableAssign({"context": lambda input: input["context"]})
-                    docs = retriever.invoke(retriever_query, config={'run_name':'retriever'})
-                    docs = context_reranker.invoke({"context": docs.get("context", []), "question": retriever_query}, config={'run_name':'context_reranker'})
+                    docs = retriever.invoke(retriever_query, config={"run_name": "retriever"})
+                    docs = context_reranker.invoke({"context": docs.get("context", []), "question": retriever_query}, config={"run_name": "context_reranker"})
                     context_to_show = docs.get("context", [])
-                    # Normalize scores to 0-1 range
                     context_to_show = normalize_relevance_scores(context_to_show)
                 else:
-                    docs = retriever.invoke(retriever_query, config={'run_name':'retriever'})
+                    docs = retriever.invoke(retriever_query, config={"run_name": "retriever"})
                     context_to_show = docs
-                
+
             docs = [format_document_with_source(d) for d in context_to_show]
-            chain = prompt | llm | StreamingFilterThinkParser | StrOutputParser()
+
+            if model_name.startswith("google"):
+                logger.info("Detected Google model - flattening multi-turn input for LLM.")
+                user_query = query
+                context_text = "\n\n".join(doc.page_content for doc in docs)
+                final_prompt = self.flatten_messages(system_prompt, conversation_history, user_query)
+                final_prompt += f"\n\nContext:\n{context_text}"
+
+                chain = llm | StreamingFilterThinkParser | StrOutputParser()
+                return chain.stream(final_prompt, config={"run_name": "llm-stream"}), context_to_show
+            else:
+                logger.info("Detected non-Google model - using ChatPromptTemplate for multi-turn RAG.")
+
+                message = [("system", system_prompt)] + conversation_history + [("user", "{question}")]
                 
-            # Check response groundedness if we still have reflection iterations available
-            if os.environ.get("ENABLE_REFLECTION", "false").lower() == "true" and reflection_counter.remaining > 0:
-                initial_response = chain.invoke({"question": query, "context": docs})
-                final_response, is_grounded = check_response_groundedness(
-                    initial_response, 
-                    docs,
-                    reflection_counter
-                )
-                if not is_grounded:
-                    logger.warning("Could not generate sufficiently grounded response after %d total reflection attempts",
-                                    reflection_counter.current_count)
-                return iter([final_response]), context_to_show
-            else:              
-                return chain.stream({"question": query, "context": docs}, config={'run_name':'llm-stream'}), context_to_show
+                self.print_conversation_history(message)
+
+                prompt_template = ChatPromptTemplate.from_messages(message)
+                chain = prompt_template | llm | StreamingFilterThinkParser | StrOutputParser()
+                return chain.stream({"question": query, "context": docs}, config={"run_name": "llm-stream"}), context_to_show
 
         except ConnectTimeout as e:
             logger.warning("Connection timed out while making a request to the LLM endpoint: %s", e)
-            return iter(["Connection timed out while making a request to the NIM endpoint. Verify if the NIM server is available."])
-
-        except requests.exceptions.ConnectionError as e:
-            if "HTTPConnectionPool" in str(e):
-                logger.error("Connection pool error while connecting to service: %s", e)
-                return iter(["Connection error: Failed to connect to service. Please verify if all required NIMs are running and accessible."])
+            return iter(["Connection timed out while making a request to the NIM endpoint. Verify if the NIM server is available."]), []
 
         except Exception as e:
-            logger.warning("Failed to generate response due to exception %s", e)
+            logger.warning("Failed to generate multi-turn response due to exception %s", e)
             print_exc()
 
             if "[403] Forbidden" in str(e) and "Invalid UAM response" in str(e):
                 logger.warning("Authentication or permission error: Verify the validity and permissions of your NVIDIA API key.")
-                return iter(["Authentication or permission error: Verify the validity and permissions of your NVIDIA API key."])
+                return iter(["Authentication or permission error: Verify the validity and permissions of your NVIDIA API key."]), []
             elif "[404] Not Found" in str(e):
                 logger.warning("Please verify the API endpoint and your payload. Ensure that the model name is valid.")
-                return iter(["Please verify the API endpoint and your payload. Ensure that the model name is valid."])
+                return iter(["Please verify the API endpoint and your payload. Ensure that the model name is valid."]), []
             else:
-                return iter([f"Failed to generate RAG chain with multi-turn response. {str(e)}"])
+                return iter([f"Failed to generate RAG chain with multi-turn response. {str(e)}"]), []
 
 
     def document_search(self, content: str, messages: List, reranker_top_k: int, vdb_top_k: int, collection_name: str = "", **kwargs) -> List[Dict[str, Any]]:

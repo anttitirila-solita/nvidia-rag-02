@@ -47,7 +47,7 @@ services:
           devices:
             - driver: nvidia
               # count: ${INFERENCE_GPU_COUNT:-all}
-              device_ids: ['${EMBEDDING_MS_GPU_ID:-1}']
+              device_ids: ['${EMBEDDING_MS_GPU_ID:-0}']
               capabilities: [gpu]
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8000/v1/health/ready"]

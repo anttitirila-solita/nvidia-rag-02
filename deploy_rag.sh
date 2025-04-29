@@ -45,25 +45,25 @@ if [ "$USE_ON_PREM" = true ]; then
   echo "Starting vector DB containers..."
   docker compose -f deploy/compose/vectordb.yaml up -d --build
 
-  echo "Starting ingestion services..."
+  # echo "Starting ingestion services..."
   docker compose -f deploy/compose/docker-compose-ingestor-server.yaml up -d --build
 
-  echo "Starting RAG services..."
+  # echo "Starting RAG services..."
   docker compose -f deploy/compose/docker-compose-rag-server.yaml up -d --build
 
-  echo "Starting Open WebUI..."
+  # echo "Starting Open WebUI..."
   docker compose -f deploy/compose/openwebui.yaml up -d
 
   sleep 10
 
-  echo "Checking RAG service health..."
-  curl -X 'GET' 'http://localhost:8081/v1/health?check_dependencies=true' -H 'accept: application/json'
+  # echo "Checking RAG service health..."
+  # curl -X 'GET' 'http://localhost:8081/v1/health?check_dependencies=true' -H 'accept: application/json'
 
   echo "Deployment complete."
   docker ps --format "table {{.ID}}\t{{.Names}}\t{{.Status}}"
 
-  echo "Access RAG Playground at: http://localhost:8090"
-  echo "Access Open WebUI at: http://localhost:8999"
+  # echo "Access RAG Playground at: http://localhost:8090"
+  # echo "Access Open WebUI at: http://localhost:8999"
 
 else
   echo "Using NVIDIA hosted models..."
