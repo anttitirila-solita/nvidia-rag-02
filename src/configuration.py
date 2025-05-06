@@ -48,7 +48,7 @@ class VectorStoreConfig(ConfigWizard):
     )
     index_type: str = configfield(
         "index_type",
-        default="GPU_CAGRA",
+        default="GPU_CAGRA", # TODO: Maybe change to HNSW when CPU is used
         help_txt="Index of the vector db",  # IVF Flat for milvus
     )
 
