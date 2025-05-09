@@ -1,19 +1,29 @@
 services:
   ollama:
+    profiles: ["gpu"]
     image: ollama/ollama:0.6.8
     container_name: ollama
-    restart: unless-stopped
     ports:
       - "11434:11434"
     volumes:
       - ollama-data:/root/.ollama
-    privileged: true
+    privileged: true # For debugging, not needed in production
     deploy:
       resources:
         reservations:
           devices:
             - driver: nvidia
               capabilities: [gpu]
+
+  ollama_cpu:
+    profiles: ["cpu"]
+    image: ollama/ollama:0.6.8
+    container_name: ollama
+    ports:
+      - "11434:11434"
+    volumes:
+      - ollama-data:/root/.ollama
+    privileged: true # For debugging, not needed in production
 
 volumes:
   ollama-data:

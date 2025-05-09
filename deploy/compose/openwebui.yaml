@@ -10,9 +10,13 @@ services:
     environment:
       - WEBUI_SECRET_KEY=${WEBUI_KEY:-default}
       - API_BASE_URL=http://nim-llm-ms:8000/v1
-      - ENABLE_OLLAMA_API=false
+      - ENABLE_OLLAMA_API=true
       - GLOBAL_LOG_LEVEL=INFO
-
+      - VECTOR_DB=milvus
+      - MILVUS_URI=http://milvus-standalone:19530
+      - MILVUS_DB=default
+      - ENABLE_SIGNUP=true
+  
 networks:
   default:
     external: true

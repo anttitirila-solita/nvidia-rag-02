@@ -14,28 +14,44 @@ else
   exit 1
 fi
 
+echo "Checking for NVIDIA GPU..."
+
+# Detect GPU and set Compose profile accordingly
+if docker info --format '{{index .Runtimes "nvidia"}}' &>/dev/null \
+   && command -v nvidia-smi &>/dev/null \
+   && nvidia-smi -L | grep -q 'GPU'; then
+    export COMPOSE_PROFILES=gpu
+    echo "NVIDIA GPU found — using GPU profile"
+else
+    export COMPOSE_PROFILES=cpu
+    echo "No NVIDIA GPU found — using CPU profile"
+fi
+
 echo "Starting Open WebUI RAG Docker Compose deployment..."
 
-  # --- Deploy services ---
-  
-  # echo "Starting Ollaam..."
-  docker compose -f deploy/compose/ollama.yaml up -d --build
+# --- Deploy services ---
 
-  echo "Starting vector DB containers..."
-  docker compose -f deploy/compose/vectordb.yaml up -d
+echo "Starting Ollama..."
+docker compose -f deploy/compose/ollama.yaml up -d --build
 
-  echo "Starting Open WebUI..."
-  docker compose -f deploy/compose/openwebui.yaml up -d
+echo "Starting vector DB containers..."
+docker compose -f deploy/compose/vectordb.yaml up -d
 
-  sleep 10
+echo "Starting Open WebUI..."
+docker compose -f deploy/compose/openwebui.yaml up "$@" -d
 
-  # echo "Checking RAG service health..."
-  # curl -X 'GET' 'http://localhost:8081/v1/health?check_dependencies=true' -H 'accept: application/json'
+# Optional: Check if model is already pulled before pulling
+MODEL_NAME="gemma3:4b-it-qat"
+if ! curl -s http://localhost:11434/api/tags | grep -q "$MODEL_NAME"; then
+  echo "Pulling model $MODEL_NAME..."
+  curl -X POST http://localhost:11434/api/pull -d "{\"name\": \"$MODEL_NAME\"}"
+else
+  echo "Model $MODEL_NAME already present."
+fi
 
-  curl -X POST http://localhost:11434/api/pull -d '{"name": "qwen3:14b-q8_0"}'
+echo "Deployment complete."
+docker ps --format "table {{.ID}}\t{{.Names}}\t{{.Status}}"
 
-  echo "Deployment complete."
-  docker ps --format "table {{.ID}}\t{{.Names}}\t{{.Status}}"
 
   # echo "Access RAG Playground at: http://localhost:8090"
   # echo "Access Open WebUI at: http://localhost:8999"
