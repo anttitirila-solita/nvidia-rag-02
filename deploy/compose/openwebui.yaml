@@ -10,13 +10,24 @@ services:
     environment:
       - WEBUI_SECRET_KEY=${WEBUI_KEY:-default}
       - API_BASE_URL=http://nim-llm-ms:8000/v1
-      - ENABLE_OLLAMA_API=true
+      - ENABLE_OLLAMA_API=True
+      - OLLAMA_BASE_URL=http:/ollama:11434
       - GLOBAL_LOG_LEVEL=INFO
       - VECTOR_DB=milvus
       - MILVUS_URI=http://milvus-standalone:19530
       - MILVUS_DB=default
-      - ENABLE_SIGNUP=true
-  
+      - ENABLE_SIGNUP=True
+      - ENABLE_ADMIN_CHAT_ACCESS=False
+      - WEBUI_NAME=tekoälypilotti
+      - ENABLE_CODE_EXECUTION=False
+      - ENABLE_EVALUATION_ARENA_MODELS=False
+      - ENABLE_COMMUNITY_SHARING=False
+      - ENABLE_MESSAGE_RATING=False
+      - RAG_EMBEDDING_ENGINE=openai
+      - CHUNK_SIZE=1000
+      - CHUNK_OVERLAP=200
+      - RAG_OPENAI_API_BASE_URL=
+
 networks:
   default:
     external: true
