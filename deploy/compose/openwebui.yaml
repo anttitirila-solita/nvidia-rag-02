@@ -7,7 +7,7 @@ services:
     ports:
       - "3000:8080"
     environment:
-      - WEBUI_SECRET_KEY=${WEBUI_KEY:-default}
+      - WEBUI_SECRET_KEY=${WEBUI_API_KEY}
       - API_BASE_URL=http://nim-llm-ms:8000/v1
       - ENABLE_OLLAMA_API=True
       - OLLAMA_BASE_URL=http://ollama:11434
@@ -25,15 +25,18 @@ services:
       - ENABLE_TAGS_GENERATION=False
       - OPENAI_API_KEY=
       - RAG_EMBEDDING_ENGINE=openai
-      - CHUNK_SIZE=512
+      - CHUNK_SIZE=500
       - CHUNK_OVERLAP=150
       - RAG_OPENAI_API_BASE_URL=http://nim-proxy:8002/v1
       - RAG_EMBEDDING_MODEL=$APP_EMBEDDINGS_MODELNAME
       - RAG_RERANKING_MODEL=$APP_RANKING_MODELNAME
       - RAG_TOP_K=10
       - RAG_TOP_K_RERANKER=5
+      - DOCLING_SERVER_URL=http://docling:5001
+      - DOCLING_OCR_ENGINE=tesseract
+      - DOCLING_OCR_LANG=eng # TODO: Add relevant languages here
+      - DOCLING_DO_PICTURE_DESCRIPTION=False
   
-
   nim-proxy:
     container_name: nim-proxy
     build: ../../nim_proxy

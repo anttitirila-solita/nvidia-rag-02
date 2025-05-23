@@ -6,7 +6,8 @@ services:
     ports:
       - "5001:5001"
     environment:
-      - DOCLING_SERVE_ENABLE_UI=true
+      - DOCLING_SERVE_ENABLE_UI=true # TODO: remove this when the UI is not needed
+      - DOCLING_SERVE_MAX_SYNC_WAIT=${DOCLING_SERVE_MAX_SYNC_WAIT} # TODO: this does not work
     deploy:
       resources:
         reservations:
@@ -20,7 +21,8 @@ services:
     ports:
       - "5001:5001"
     environment:
-      - DOCLING_SERVE_ENABLE_UI=true
+      - DOCLING_SERVE_ENABLE_UI=true # TODO: remove this when the UI is not needed
+      - DOCLING_SERVE_MAX_SYNC_WAIT=${DOCLING_SERVE_MAX_SYNC_WAIT} # TODO: this does not work
 
 networks:
   default:

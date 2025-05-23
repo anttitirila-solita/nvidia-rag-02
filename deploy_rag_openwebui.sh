@@ -56,7 +56,7 @@ echo "Starting Open WebUI..."
 docker compose -f deploy/compose/openwebui.yaml up "$@" -d --build
 
 # Optional: Check if model is already pulled before pulling
-MODEL_NAME="gemma3:4b-it-qat"
+MODEL_NAME="gemma3:27b-it-qat"
 if ! curl -s http://localhost:11434/api/tags | grep -q "$MODEL_NAME"; then
   echo "Pulling model $MODEL_NAME..."
   curl -X POST http://localhost:11434/api/pull -d "{\"name\": \"$MODEL_NAME\"}"
