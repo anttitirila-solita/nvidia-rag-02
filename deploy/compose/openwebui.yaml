@@ -1,8 +1,7 @@
-
 services:
   open-webui:
     container_name: open-webui
-    image: ghcr.io/open-webui/open-webui:${WEBUI_DOCKER_TAG:-0.6.5}
+    image: ghcr.io/open-webui/open-webui:${WEBUI_DOCKER_TAG:-0.6.10}
     volumes:
       - /opt/open-webui:/app/backend/data
     ports:
@@ -11,22 +10,35 @@ services:
       - WEBUI_SECRET_KEY=${WEBUI_KEY:-default}
       - API_BASE_URL=http://nim-llm-ms:8000/v1
       - ENABLE_OLLAMA_API=True
-      - OLLAMA_BASE_URL=http:/ollama:11434
-      - GLOBAL_LOG_LEVEL=INFO
+      - OLLAMA_BASE_URL=http://ollama:11434
+      - GLOBAL_LOG_LEVEL=DEBUG
       - VECTOR_DB=milvus
       - MILVUS_URI=http://milvus-standalone:19530
       - MILVUS_DB=default
       - ENABLE_SIGNUP=True
       - ENABLE_ADMIN_CHAT_ACCESS=False
-      - WEBUI_NAME=tekoälypilotti
       - ENABLE_CODE_EXECUTION=False
+      - ENABLE_CODE_INTERPRETER=False
       - ENABLE_EVALUATION_ARENA_MODELS=False
       - ENABLE_COMMUNITY_SHARING=False
       - ENABLE_MESSAGE_RATING=False
+      - ENABLE_TAGS_GENERATION=False
+      - OPENAI_API_KEY=
       - RAG_EMBEDDING_ENGINE=openai
-      - CHUNK_SIZE=1000
-      - CHUNK_OVERLAP=200
-      - RAG_OPENAI_API_BASE_URL=
+      - CHUNK_SIZE=512
+      - CHUNK_OVERLAP=150
+      - RAG_OPENAI_API_BASE_URL=http://nim-proxy:8002/v1
+      - RAG_EMBEDDING_MODEL=$APP_EMBEDDINGS_MODELNAME
+      - RAG_RERANKING_MODEL=$APP_RANKING_MODELNAME
+      - RAG_TOP_K=10
+      - RAG_TOP_K_RERANKER=5
+  
+
+  nim-proxy:
+    container_name: nim-proxy
+    build: ../../nim_proxy
+    ports:
+      - "8002:8002"
 
 networks:
   default:

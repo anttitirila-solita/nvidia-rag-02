@@ -1,0 +1,28 @@
+services:
+  docling:
+    profiles: ["gpu"]
+    image: quay.io/docling-project/docling-serve:v0.10.1
+    container_name: docling
+    ports:
+      - "5001:5001"
+    environment:
+      - DOCLING_SERVE_ENABLE_UI=true
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - capabilities: [gpu]
+
+  docling_cpu:
+    profiles: ["cpu"]
+    image: quay.io/docling-project/docling-serve:v0.10.1
+    container_name: docling
+    ports:
+      - "5001:5001"
+    environment:
+      - DOCLING_SERVE_ENABLE_UI=true
+
+networks:
+  default:
+    external: true
+    name: nvidia-rag
