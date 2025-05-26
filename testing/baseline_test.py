@@ -1,11 +1,17 @@
 import requests
 import time
 import json
+from dotenv import load_dotenv
+import os
 
 # https://docs.openwebui.com/getting-started/api-endpoints/
 
 # Configuration
-API_KEY = ""  # <-- Replace this with your actual Open WebUI API key
+# Load API key from .env file
+load_dotenv("../.env")
+API_KEY = os.getenv("OPEN_WEBUI_API_KEY")
+if not API_KEY:
+    raise ValueError("API_KEY not found in ../.env file")
 BASE_URL = "http://localhost:3000"
 
 MODEL = "gemma3:27b-it-qat"

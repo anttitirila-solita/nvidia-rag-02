@@ -27,7 +27,7 @@ services:
       - RAG_EMBEDDING_ENGINE=openai
       - CHUNK_SIZE=500
       - CHUNK_OVERLAP=150
-      - RAG_OPENAI_API_BASE_URL=http://nim-proxy:8002/v1
+      - RAG_OPENAI_API_BASE_URL=http://nim-proxy:8020/v1
       - RAG_EMBEDDING_MODEL=$APP_EMBEDDINGS_MODELNAME
       - RAG_RERANKING_MODEL=$APP_RANKING_MODELNAME
       - RAG_TOP_K=10
@@ -41,7 +41,7 @@ services:
     container_name: nim-proxy
     build: ../../nim_proxy
     ports:
-      - "8002:8002"
+      - "8020:8020"
 
 networks:
   default:

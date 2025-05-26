@@ -7,7 +7,7 @@ services:
     ports:
     - "9080:8000"
     expose:
-    - "8002"
+    - "8000"
     environment:
       NGC_API_KEY: ${NVIDIA_API_KEY}
       NIM_LOGGING_LEVEL: DEBUG
@@ -40,6 +40,7 @@ services:
     environment:
       NGC_API_KEY: ${NVIDIA_API_KEY}
     user: "${USERID}"
+    shm_size: 8GB
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8010/v1/health/ready"]
       interval: 10s
