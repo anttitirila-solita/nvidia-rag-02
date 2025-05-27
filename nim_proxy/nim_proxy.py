@@ -11,7 +11,7 @@ log = logging.getLogger("rerank-proxy")
 # URLs for NIM services
 NIM_EMBEDDING_URL = os.getenv("NIM_EMBEDDING_URL", "http://nemoretriever-embedding-ms:8000/v1/embeddings")
 NIM_RERANKER_URL = os.getenv("NIM_RERANKER_URL", "http://nemoretriever-ranking-ms:8000/v1/ranking")
-DEFAULT_RERANK_MODEL = os.getenv("NIM_RERANK_MODEL", "nvidia/llama-3.2-nv-rerankqa-1b-v2")
+DEFAULT_RERANK_MODEL = os.getenv("APP_RANKING_MODELNAME", "nvidia/nv-rerankqa-mistral-4b-v3")
 
 app = FastAPI()
 
