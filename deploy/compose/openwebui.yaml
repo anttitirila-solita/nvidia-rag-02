@@ -17,6 +17,7 @@ services:
       - MILVUS_DB=default
       - ENABLE_SIGNUP=True
       - ENABLE_ADMIN_CHAT_ACCESS=False
+      - ENABLE_ADMIN_EXPORT=False
       - ENABLE_CODE_EXECUTION=False
       - ENABLE_CODE_INTERPRETER=False
       - ENABLE_EVALUATION_ARENA_MODELS=False

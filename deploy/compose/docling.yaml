@@ -8,6 +8,8 @@ services:
     environment:
       - DOCLING_SERVE_ENABLE_UI=true # TODO: remove this when the UI is not needed
       - DOCLING_SERVE_MAX_SYNC_WAIT=${DOCLING_SERVE_MAX_SYNC_WAIT} # TODO: this does not work
+      - DOCLING_SERVE_ENG_LOC_NUM_WORKERS=${DOCLING_SERVE_ENG_LOC_NUM_WORKERS}
+      - OMP_NUM_THREADS=${OMP_NUM_THREADS}
     deploy:
       resources:
         reservations:
@@ -23,6 +25,8 @@ services:
     environment:
       - DOCLING_SERVE_ENABLE_UI=true # TODO: remove this when the UI is not needed
       - DOCLING_SERVE_MAX_SYNC_WAIT=${DOCLING_SERVE_MAX_SYNC_WAIT} # TODO: this does not work
+      - DOCLING_SERVE_ENG_LOC_NUM_WORKERS=${DOCLING_SERVE_ENG_LOC_NUM_WORKERS}
+      - OMP_NUM_THREADS=${OMP_NUM_THREADS}
 
 networks:
   default:
