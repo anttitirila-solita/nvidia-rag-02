@@ -7,7 +7,8 @@ services:
       - "5001:5001"
     environment:
       - DOCLING_SERVE_ENABLE_UI=true # TODO: remove this when the UI is not needed
-      - DOCLING_SERVE_MAX_SYNC_WAIT=${DOCLING_SERVE_MAX_SYNC_WAIT} # TODO: this does not work
+      - DOCLING_SERVE_MAX_SYNC_WAIT=${DOCLING_SERVE_MAX_SYNC_WAIT}
+      - DOCLING_SERVE_ENG_LOC_NUM_WORKERS=8
     deploy:
       resources:
         reservations:
@@ -22,7 +23,8 @@ services:
       - "5001:5001"
     environment:
       - DOCLING_SERVE_ENABLE_UI=true # TODO: remove this when the UI is not needed
-      - DOCLING_SERVE_MAX_SYNC_WAIT=${DOCLING_SERVE_MAX_SYNC_WAIT} # TODO: this does not work
+      - DOCLING_SERVE_MAX_SYNC_WAIT=${DOCLING_SERVE_MAX_SYNC_WAIT}
+      - DOCLING_SERVE_ENG_LOC_NUM_WORKERS=8
 
 networks:
   default:
