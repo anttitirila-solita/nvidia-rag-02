@@ -4,6 +4,6 @@ WORKDIR /app
 
 COPY reset.py .
 
-RUN pip install requests
+RUN pip install requests pymilvus
 
 CMD ["python", "reset.py"]
