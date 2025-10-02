@@ -1,4 +1,8 @@
-# Notes about the customizing the NVIDIA RAG Pipeline
+# Notes about the customizing the NVIDIA RAG Pipeline for internal use
+
+## Important notes before start
+
+- **This needs to be deployed in the internet first start.** After first successfull start, the server should be movable to an internal network for use.
 
 ## Background
 
@@ -10,9 +14,16 @@ Also, we wanted the pipeline to run with 1-2 L40S GPUs, so optimizations and off
 
 When starting our work we forked the 2.0 version of the [NVDIA RAG Bluepring Github repo](https://build.nvidia.com/nvidia/build-an-enterprise-rag-pipeline). The repo has since been updated at least to version 2.2.1. Merging the changes to our current fork might be relevant in the future.
 
+## Prerequisites
+
+To run this pilot we need:
+
+- At least one NVIDIA L40S GPU and a server (physical or virtual) to run it
+- NVIDIA Enterprise AI license or developer credentials to run NVIDIA NIMs
+
 ## Getting started
 
-To run you need compatible hardware, a server with at least one L40S GPU is needed. For development and testing we used the services of [DataCruch](http://www.datacrunch.io).
+To run you need compatible hardware, a server with at least one L40S GPU is needed. For development and testing we used the services of [DataCruch](http://www.datacrunch.io). NVIDIAs cloud service [Brev](https://brev.nvidia.com/) is an easy option, although it is a bit on the expensive side and does not offer customization options for the runtime environment etc. as DataCruch for example does.
 
 We deployend a virtual Ubuntu Linux instance to DataCrunch and wrote our code with Visual Studio code Remote Server connection to the instance. This worked well. In this setup you deploy you instance preferably with generated SSH-keys and modify your ./ssh/config accordingly:
 
@@ -45,6 +56,8 @@ After use, you may stop the services by running the shutdown script at the remot
 ./deploy_rag_openwebui.sh
 ```
 
+You may monitor the system usage, especially RAM and GPU memory consumption with *htop* and *nvidia-smi*.
+
 ## Configuration
 
 ### Adding users, groups and giving access to models.
@@ -75,11 +88,29 @@ Click *Save* to apply the changes and check for any error messages. The final se
 
 ### Setting context length and token limits
 
-TODO: Why setting a decent context window and token limit length is important.
+Context length defines how much memory the language model has regarding the ongoing chat/discussion. Every model has a maximum context lenght, although using the max length is not always optimal. The model usually starts forgetting things when using excessively long context lenghts. Context lenght also consumes GPU memory.
 
-## What is RAG and how to use it
+In our tests we used context length of 4096. With bigger and more capable GPU (upgrade from NVIDIA L40S) the context lenght can be longer.
 
-TODO: Explain basic concepts and tips.
+Use admin settings on the respective models to increase model context lenght.
+
+**TODO:** Add up to date pic: ![Setup page for document content extraction]()
+
+## What is RAG and how to use it in this pilot
+
+### Background
+
+RAG (Retrieval Augmented Generation) is a concept where you can have conversation about data that is not included in the training data of the underlying Large Language Model. Typically RAG is used so that the user drops her/his on set of documents to the chat. This is our supported use case. More advanced use cases could include importing enterprise data to a local database in the RAG system for general or use or use with role-based access.
+
+### The current implementation
+
+We use the NVIDIA RAG blueprint as the baseline. We have modified the pipeline and bypassed many components of the implementation due to L40S memory constraints. Also while NVIDIA releases high-quality NIMs the selection of the potential models is limited and the release delay longer for example when compared to Ollama. The NVIDIA blueprint also lacks good enterprise-level UI. We chose to implement Open WebUI while trying to keep the changes to the base Open WebUI at minimum.
+
+Due to the current limitations with [NVIDIA RAG Blueprint] components we decided to rely mostly on the [Open WebUI RAG](https://docs.openwebui.com/tutorials/tips/rag-tutorial) functionality. Instructions on setting the [RAG pipeline](https://docs.openwebui.com/features/rag#enhanced-rag-pipeline) are relevant reading. In short, we use Open WebUI RAG pipeline but use NVIDIA NIMs where they make the most sense, such as vector database Milvus engine, embedding engine, reranking etc. To integrate these to the Open WebUI proxy.
+
+### About the terms of use
+
+For this use case we used the abovementioned NVIDIA Blueprint to build an enterprise RAG pipeline. However, many language-model components or the pipeline could be under Meta LLama Community License Agreement (various versions) that limits their use in certain purposes [Llama 3.3. acceptable use](https://www.llama.com/llama3_3/use-policy/). NVIDIA Lllama derived models however do not necessary refer to Lllama Community License Agreement. You may check this at [NVIDIA NGC Catalog](https://catalog.ngc.nvidia.com/). For example, some Nemotron models do not refer to the Llama Community License, Llama-3.1-Nemotron-Nano-8B-v1 for example, and some including Llama-3.3-nemotron-super-49b-v1.5 do. [NVIDIA Software License Agreement](https://www.nvidia.com/en-us/agreements/enterprise-software/nvidia-software-license-agreement/) and other NVIDIA agreements regarding use.
 
 ## About system variables
 
@@ -97,14 +128,33 @@ TODO: Explain why Docling and why it is running CPU now. One should seriosly con
 
 TODO: Explain why we need nim-proxy - we need to make NIM services API look like OpenAI API. Maybe MCP could help in this?
 
+## Evaluations
+
+TODO: How to collect feedback
+
+## Troubleshooting and otential pain points
+
+- RAG may not always see the offered content. [Open WebUI Troubleshooting RAG](https://docs.openwebui.com/troubleshooting/rag/) might have suggestions.
+- Docling performance and DOCLING_SERVE_MAX_SYNC_WAIT=600. The Open WebUI does not expose the status nor recovery properly. 
+- Capability of the OCR pipeline in detecting text from images. The reliability of this has not been thoroughly tested.
+
 ## Future considerations
 
 - Improving security. Root Signals, NVIDIA Garak, Snyk etc.
-- Importing open source material input / scraping from internet.
-- Decision whether to keep up with the blueprint development or diverge.
-- MCP potential and security?
+- Importing open source material input / scraping from internet
+- Decision whether to keep up with the blueprint development or diverge
+- [MCP](https://docs.openwebui.com/openapi-servers/mcp) potential and security?
 - Open WebUI enterprise option with hardening support etc.
 - Long term visions with scalability. Needs Kubernetes platform and orchestration?
+- How to keep up and deploy fresh Open WebUI versions?
+- There are small and capable models such as Qwen. Exploring them could make sense at some point.
+- Agentic workflows are taking over the workflows. [NVIDIA Safety for Agentic AI](https://build.nvidia.com/nvidia/safety-for-agentic-ai), [NVIDIA Build an AI Agent for Enterprise Research](https://build.nvidia.com/nvidia/aiq)
+- How to collect and analyze feedback safely without exposing the discussions of the users. This critical for further development
+- What is the delivery model, acceptable level of reliability 
+- Integrate to organization HTTPS proxy
+- Use organization authentication, OAUTH, and especially [Azure AD Domain Services LDAPS](https://docs.openwebui.com/tutorials/offline-mode)
+- Cross-check against the [Open WebUI offline mode instructions](https://docs.openwebui.com/tutorials/offline-mode)
+- RAG system prompt update and enhancement. Which language should one use, for example?
 
 ## Cleanup
 
@@ -113,6 +163,7 @@ TODO: Thoughts about cleanup here.
 ```bash
 docker compose -f deploy/compose/cleanup.yaml up -d --build
 ```
+The cleanup script drops tables from the [Open WebUI Internal SQLite Database](https://docs.openwebui.com/tutorials/tips/sqlite-database#user-table).
 
 ## Misc
 
@@ -126,4 +177,4 @@ Milvus management interface is available at http://localhost:9091/webui/
 - Milvus cluster ETCD metastore at http://127.0.0.1:2379 reports Unhealthy status
 - Change all log levels to minimum, maybe "ERROR" or "WARNING"/"WARN"
 - Deploy milvus to GPU if better GPU (more memory) is available
-- Deploy Docling to GPU if better GPU (more memory)
+- Deploy Docling to GPU if better GPU (more memory). Maybe switch to H100 and offload Docling to GPUs.
