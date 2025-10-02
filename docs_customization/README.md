@@ -71,7 +71,7 @@ Finally, set the reranking model. Enable *Hybrid Search*. Select *Reranking Engi
 
 Click *Save* to apply the changes and check for any error messages. The final settings should look like this:
 
-![Setup page for document content extraction](pics/Screenshot%202025-09-25%20at%2015.52.58.png)
+**TODO:** Add up to date pic: ![Setup page for document content extraction]()
 
 ### Setting context length and token limits
 
