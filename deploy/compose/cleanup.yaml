@@ -1,0 +1,13 @@
+services:
+  webui-resetter:
+    container_name: webui-resetter
+    build: ../../webui_resetter
+    volumes:
+      - /opt/open-webui:/app/backend/data
+    environment:
+      - LOG_LEVEL=DEBUG
+
+networks:
+  default:
+    external: true
+    name: nvidia-rag

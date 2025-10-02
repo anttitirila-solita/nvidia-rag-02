@@ -27,7 +27,19 @@ else
     echo "No NVIDIA GPU found — using CPU profile"
 fi
 
+echo "Authenticating with nvcr.io..."
+echo "${NVIDIA_API_KEY}" | docker login nvcr.io -u '$oauthtoken' --password-stdin
+
 echo "Starting Open WebUI RAG Docker Compose deployment..."
+
+# --- Setup ---
+echo "Creating model cache directory..."
+mkdir -p "${MODEL_DIRECTORY}"
+export MODEL_DIRECTORY
+
+echo "Deploying on-prem NIMs..."
+
+USERID=$(id -u) docker compose -f deploy/compose/nims_openwebui.yaml up -d --build
 
 # --- Deploy services ---
 
@@ -37,11 +49,14 @@ docker compose -f deploy/compose/ollama.yaml up -d --build
 echo "Starting vector DB containers..."
 docker compose -f deploy/compose/vectordb.yaml up -d
 
+echo "Starting Docling..."
+docker compose -f deploy/compose/docling.yaml up -d --build
+
 echo "Starting Open WebUI..."
-docker compose -f deploy/compose/openwebui.yaml up "$@" -d
+docker compose -f deploy/compose/openwebui.yaml up "$@" -d --build
 
 # Optional: Check if model is already pulled before pulling
-MODEL_NAME="gemma3:4b-it-qat"
+MODEL_NAME="gemma3:27b-it-qat"
 if ! curl -s http://localhost:11434/api/tags | grep -q "$MODEL_NAME"; then
   echo "Pulling model $MODEL_NAME..."
   curl -X POST http://localhost:11434/api/pull -d "{\"name\": \"$MODEL_NAME\"}"

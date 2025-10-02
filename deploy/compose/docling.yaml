@@ -1,0 +1,34 @@
+services:
+  docling:
+    profiles: ["gpu"]
+    image: quay.io/docling-project/docling-serve:v0.10.1
+    container_name: docling
+    ports:
+      - "5001:5001"
+    environment:
+      - DOCLING_SERVE_ENABLE_UI=true # TODO: remove this when the UI is not needed
+      - DOCLING_SERVE_MAX_SYNC_WAIT=${DOCLING_SERVE_MAX_SYNC_WAIT} # TODO: this does not work
+      - DOCLING_SERVE_ENG_LOC_NUM_WORKERS=${DOCLING_SERVE_ENG_LOC_NUM_WORKERS}
+      - OMP_NUM_THREADS=${OMP_NUM_THREADS}
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - capabilities: [gpu]
+
+  docling_cpu:
+    profiles: ["cpu"]
+    image: quay.io/docling-project/docling-serve:v0.10.1
+    container_name: docling
+    ports:
+      - "5001:5001"
+    environment:
+      - DOCLING_SERVE_ENABLE_UI=true # TODO: remove this when the UI is not needed
+      - DOCLING_SERVE_MAX_SYNC_WAIT=${DOCLING_SERVE_MAX_SYNC_WAIT} # TODO: this does not work
+      - DOCLING_SERVE_ENG_LOC_NUM_WORKERS=${DOCLING_SERVE_ENG_LOC_NUM_WORKERS}
+      - OMP_NUM_THREADS=${OMP_NUM_THREADS}
+
+networks:
+  default:
+    external: true
+    name: nvidia-rag

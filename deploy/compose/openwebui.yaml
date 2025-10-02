@@ -1,23 +1,54 @@
-
 services:
   open-webui:
     container_name: open-webui
-    image: ghcr.io/open-webui/open-webui:${WEBUI_DOCKER_TAG:-0.6.5}
+    image: ghcr.io/open-webui/open-webui:${WEBUI_DOCKER_TAG:-0.6.10}
     volumes:
       - /opt/open-webui:/app/backend/data
     ports:
       - "3000:8080"
     environment:
-      - WEBUI_SECRET_KEY=${WEBUI_KEY:-default}
+      - WEBUI_SECRET_KEY=${WEBUI_API_KEY}
       - API_BASE_URL=http://nim-llm-ms:8000/v1
-      - ENABLE_OLLAMA_API=true
-      - GLOBAL_LOG_LEVEL=INFO
+      - ENABLE_OLLAMA_API=True
+      - OLLAMA_BASE_URL=http://ollama:11434
+      - GLOBAL_LOG_LEVEL=DEBUG
       - VECTOR_DB=milvus
       - MILVUS_URI=http://milvus-standalone:19530
       - MILVUS_DB=default
-      - ENABLE_SIGNUP=true
-      # Ollama osoite!
+      - ENABLE_SIGNUP=True
+      - ENABLE_ADMIN_CHAT_ACCESS=False
+      - ENABLE_ADMIN_EXPORT=False
+      - ENABLE_CODE_EXECUTION=False
+      - ENABLE_CODE_INTERPRETER=False
+      - ENABLE_EVALUATION_ARENA_MODELS=False
+      - ENABLE_COMMUNITY_SHARING=False
+      - ENABLE_MESSAGE_RATING=False
+      - ENABLE_TAGS_GENERATION=False
+      - OPENAI_API_KEY=
+      - CHUNK_SIZE=400
+      - CHUNK_OVERLAP=100
+      - ENABLE_RAG_HYBRID_SEARCH=true      
+      - RAG_EMBEDDING_ENGINE=openai
+      - RAG_OPENAI_API_BASE_URL=http://nim-proxy:8020/v1
+      - RAG_EMBEDDING_MODEL=$APP_EMBEDDINGS_MODELNAME
+      - RAG_RERANKING_MODEL=
+      - RAG_RERANKING_MODEL_AUTO_UPDATE=False
+      - RAG_TOP_K=10
+      - RAG_TOP_K_RERANKER=5
+      - DOCLING_SERVER_URL=http://docling:5001
+      - DOCLING_OCR_ENGINE=tesseract
+      - DOCLING_OCR_LANG=eng,fra,deu,spa,swe,fin,rus # TODO: Add relevant languages here
+      - DOCLING_DO_PICTURE_DESCRIPTION=False
   
+  nim-proxy:
+    container_name: nim-proxy
+    build: ../../nim_proxy
+    ports:
+      - "8020:8020"
+    environment:
+      - LOG_LEVEL=DEBUG
+      # Ollama osoite!
+
 networks:
   default:
     external: true
