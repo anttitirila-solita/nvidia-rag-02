@@ -55,11 +55,11 @@ Next, click again the user menu at lower left, click *Settings* and *Admin Setti
 
 The user(s) belonging to *RAG users* should now be able to use the installed models.
 
-### Setting the system parameters
+### Setting the system parameters for document processing
 
 Unfortunately not all parameters can be set using system variables and some need tweaking using the user interface.
 
-#### 1. Context extraction engine
+#### Context extraction engine
 
 Click user menu lower left, select *Settings* and *Admin Settings*. Change context extraction engine to *Docling* and check that the address of the engine is set to http://docling:5001. Put the address in the box if necessary. 
 
@@ -67,13 +67,13 @@ Next set Text splitter chuck size to 400 and chunck overlap to 100 if not set by
 
 Check that *Embedding Model Engine* is set to *OpenAI* and the address is http://nim-proxy:8020/v1. *API Key* can be anything, *abcd* for example. *Embedding Model* should say nvidia/nv-embedqa-e5-v5.
 
-TODO: Check if it is possible to set the reranking model and thus if this is relevant:
-
 Finally, set the reranking model. Enable *Hybrid Search*. Select *Reranking Engine* and choose *External*, for *Reranking Engine* type http://nim-proxy:8020/v1/ranking, for *API Key* type anything, *abcd*, for example and to *Reranking Model* type *nvidia/nv-rerankqa-mistral-4b-v3*.
 
-Click *Save* to apply the changes and check for any error messages. The final settings should look like [TODO: pic here].
+Click *Save* to apply the changes and check for any error messages. The final settings should look like this:
 
-#### 2. Setting context length and token limits
+![Setup page for document content extraction](pics/Screenshot%202025-09-25%20at%2015.52.58.png)
+
+### Setting context length and token limits
 
 TODO: Why setting a decent context window and token limit length is important.
 
@@ -97,6 +97,15 @@ TODO: Explain why Docling and why it is running CPU now. One should seriosly con
 
 TODO: Explain why we need nim-proxy - we need to make NIM services API look like OpenAI API. Maybe MCP could help in this?
 
+## Future considerations
+
+- Improving security. Root Signals, NVIDIA Garak, Snyk etc.
+- Importing open source material input / scraping from internet.
+- Decision whether to keep up with the blueprint development or diverge.
+- MCP potential and security?
+- Open WebUI enterprise option with hardening support etc.
+- Long term visions with scalability. Needs Kubernetes platform and orchestration?
+
 ## Cleanup
 
 TODO: Thoughts about cleanup here.
@@ -113,7 +122,7 @@ Milvus management interface is available at http://localhost:9091/webui/
 ## TODO
 
 - https reverse proxy implementation
-- automatic trash collection
+- Automatic cleanup / trash collection, to run every night midnight forced and perhaps more frequenty sensing whic users are active and only cleaning closed sessions. Logout trigger might be possible as well
 - Milvus cluster ETCD metastore at http://127.0.0.1:2379 reports Unhealthy status
 - Change all log levels to minimum, maybe "ERROR" or "WARNING"/"WARN"
 - Deploy milvus to GPU if better GPU (more memory) is available
