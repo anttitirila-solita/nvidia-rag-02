@@ -16,6 +16,7 @@ services:
       - MILVUS_URI=http://milvus-standalone:19530
       - MILVUS_DB=default
       - ENABLE_SIGNUP=true
+      # Ollama osoite!
   
 networks:
   default:
