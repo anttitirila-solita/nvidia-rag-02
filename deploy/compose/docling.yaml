@@ -1,7 +1,7 @@
 services:
   docling:
     profiles: ["gpu"]
-    image: quay.io/docling-project/docling-serve:v0.10.1
+    image: quay.io/docling-project/docling-serve-cu128:v1.8.0
     container_name: docling
     ports:
       - "5001:5001"
@@ -10,11 +10,16 @@ services:
       - DOCLING_SERVE_MAX_SYNC_WAIT=${DOCLING_SERVE_MAX_SYNC_WAIT} # TODO: this does not work
       - DOCLING_SERVE_ENG_LOC_NUM_WORKERS=${DOCLING_SERVE_ENG_LOC_NUM_WORKERS}
       - OMP_NUM_THREADS=${OMP_NUM_THREADS}
+      - NVIDIA_VISIBLE_DEVICES=all
+      - NVIDIA_DRIVER_CAPABILITIES=all
+      #- DOCLING_DEVICE=cuda:0
     deploy:
       resources:
         reservations:
           devices:
             - capabilities: [gpu]
+              count: all
+              #driver: nvidia
 
   docling_cpu:
     profiles: ["cpu"]
