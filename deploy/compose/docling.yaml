@@ -23,7 +23,7 @@ services:
 
   docling_cpu:
     profiles: ["cpu"]
-    image: quay.io/docling-project/docling-serve:v0.10.1
+    image: quay.io/docling-project/docling-serve:v1.8.0
     container_name: docling
     ports:
       - "5001:5001"
