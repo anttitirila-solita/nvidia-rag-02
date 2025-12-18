@@ -64,6 +64,12 @@ else
   echo "Model $MODEL_NAME already present."
 fi
 
+#echo "Starting nginx..."
+#docker compose -f deploy/compose/nginx.yaml up -d --build
+
+#echo "Starting vLLM..."
+#docker compose -f deploy/compose/vLLM.yaml up -d --build
+
 echo "Deployment complete."
 docker ps --format "table {{.ID}}\t{{.Names}}\t{{.Status}}"
 

@@ -2,6 +2,7 @@ services:
   vllm:
     image: vllm/vllm-openai:latest
     runtime: nvidia
+    container_name: vllm
     deploy:
       resources:
         reservations:
@@ -14,12 +15,13 @@ services:
     volumes:
       - ~/.cache/huggingface:/root/.cache/huggingface
     ports:
-      - "8000:8000"
+      - "8001:8000"
     ipc: host
     command: >
-      --model Qwen/Qwen3-0.6B
+      --model google/gemma-3-12b-it
 
 networks:
   default:
     external: true
     name: nvidia-rag
+     

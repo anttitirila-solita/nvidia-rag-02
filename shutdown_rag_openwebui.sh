@@ -42,3 +42,9 @@ docker compose -f deploy/compose/vectordb.yaml down
 
 echo "Shutting down NIMs..."
 docker compose -f deploy/compose/nims_openwebui.yaml down
+
+#echo "Shutting down nginx..."
+#docker compose -f deploy/compose/nginx.yaml down
+
+#echo "Shutting down vllm..."
+#docker compose -f deploy/compose/vLLM.yaml down
