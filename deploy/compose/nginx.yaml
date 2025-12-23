@@ -1,4 +1,4 @@
-vervices:
+services:
   nginx:
     image: nginx:alpine
     container_name: nginx
