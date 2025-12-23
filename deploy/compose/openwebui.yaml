@@ -39,6 +39,8 @@ services:
       - DOCLING_OCR_ENGINE=tesseract
       - DOCLING_OCR_LANG=eng,fra,deu,spa,swe,fin,rus # TODO: Add relevant languages here
       - DOCLING_DO_PICTURE_DESCRIPTION=False
+#      - ENABLE_OPENAI_API=true
+#      - OPENAI_API_BASE_URL=http://vllm:8000/v1
   
   nim-proxy:
     container_name: nim-proxy
