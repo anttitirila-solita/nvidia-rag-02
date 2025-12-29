@@ -8,7 +8,7 @@
 
 The [NVIDIA RAG Blueprint](https://build.nvidia.com/nvidia/build-an-enterprise-rag-pipeline) provides useful template for creating enterprise-destined RAG pipelines. For most cases it is not production-ready as-is, but provides a set of useful building blocks that you may test out of the box. This blueprint is based on the NVIDIA NIM architecture. It should be deployable anywhere NVIDIA hardware and the NIM software stack are available.. For NVIDIA Enterprise AI and NIM-compatible infrastructure, please check the [documentation](https://docs.nvidia.com/ai-enterprise/release-7/7.1/support/support-matrix.html).
 
-Our motivation to customize the blueprint to our needs was to add a user interface (we went with [Open WebUI](https://docs.openwebui.com]), support for models beyond those provided by Meta and (so we added [Ollama](https://docs.ollama.com)) and experiment also with other document intelligence workflows, namely [Docling](https://github.com/docling-project/docling).
+Our motivation to customize the blueprint to our needs was to add a user interface (we went with [Open WebUI](https://docs.openwebui.com]), support for models beyond those provided by Meta and (so we added [Ollama](https://docs.ollama.com)) and experiment also with other document intelligence workflows, namely [Docling](https://github.com/docling-project/docling). There is also possibility to use [vLLM](https://docs.vllm.ai) to run models more efficiently. vLLM is commented out in our current deployment. Instructions on how to enable it are in chapter *Enabling vLLM* below.
 
 We also aimed to run the pipeline on one or two L40S GPUs, requiring memory optimizations and selective offloading from GPU memory.
 
@@ -164,6 +164,18 @@ The cleanup script drops tables from the [Open WebUI Internal SQLite Database](h
 
 
 Once Open WebUI evolves there might be other locations were chat or document information is left over. One should keep an eye for these potential leak points.
+
+## Enabling vLLM
+
+vLLM is an optimized model serving library that can improve performance and memory usage when running large language models. In our deployment vLLM is included but commented out. To enable it, follow these steps:
+Uncomment the vLLM service in the *deploy/compose/openwebui.yaml* file by removing the `#` characters before the lines ENABLE_OPENAI_API and OPENAI_API_BASE_URL environment variables. Some models need HUGGING_FACE_HUB_TOKEN environment variable in *.env* file.
+
+Uncomment the vLLM service deploy also in deploy_rag_openwebui.sh script and shutdown_rag_openwebui.sh script. There is also a separate deploy_vLLM.sh script that can be used to deploy only vLLM service if needed.
+
+Check from Open WebUI admin settings that in *Settings -> Admin Settings -> Connections* the OPENAI API is enabled and Manage OpenAI API Connections is set to http://vllm:8080/v1.
+
+If you use both ollama and vLLM, memory usage can be an issue if you are using non- quantized models. Consider using quantized models in vLLM to reduce memory consumption.
+For example gemma-3-12b model takes 57GB of GPU memory in non-quantized form if run in vLLM.
 
 ## Troubleshooting and potential pain points
 
