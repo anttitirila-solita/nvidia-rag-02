@@ -26,7 +26,7 @@ def delete_local_files(path):
 # If there are other tables in the database that may contain sensitive information,
 # please review the database schema and update this function accordingly to prevent data leaks.
 def reset_sqlite_db(db_path):
-    print(f"Resetting vector DB at {db_path}...")
+    print(f"Resetting Open WebUI database at {db_path}...")
     conn = sqlite3.connect(db_path)
     cursor = conn.cursor()
 
@@ -47,8 +47,9 @@ def reset_sqlite_db(db_path):
         # Close the connection
         conn.close()
 
-# TODO: Clear Milvus collections
 def reset_milvus_db(prefix, vector_db_name="default"):
+    print(f"Resetting Milvus vector database...")
+
     # Connect to Milvus
     connections.connect(
         alias="default",
