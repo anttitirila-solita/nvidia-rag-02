@@ -10,7 +10,7 @@ The [NVIDIA RAG Blueprint](https://build.nvidia.com/nvidia/build-an-enterprise-r
 
 Our motivation to customize the blueprint to our needs was to add a user interface (we went with [Open WebUI](https://docs.openwebui.com]), support for models beyond those provided by Meta and (so we added [Ollama](https://docs.ollama.com)) and experiment also with other document intelligence workflows, namely [Docling](https://github.com/docling-project/docling). There is also possibility to use [vLLM](https://docs.vllm.ai) to run models more efficiently. vLLM is commented out in our current deployment. Instructions on how to enable it are in chapter *Enabling vLLM* below.
 
-We also aimed to run the pipeline on one or two L40S GPUs, requiring memory optimizations and selective offloading from GPU memory.
+We also aimed to run the pipeline on one or two L40S GPUs, requiring memory optimizations and selective offloading from GPU memory. The solution has been successfully deployed and tested on NVIDIA H100 GPU hardware.
 
 When starting our work we forked the 2.0 version of the [NVIDIA RAG Blueprint GitHub repository](https://build.nvidia.com/nvidia/build-an-enterprise-rag-pipeline). The repo has since been updated at least to version 2.2.1. Merging the changes to our current fork might be relevant in the future.
 
@@ -18,19 +18,19 @@ When starting our work we forked the 2.0 version of the [NVIDIA RAG Blueprint Gi
 
 To run this pilot we need:
 
-- At least one NVIDIA L40S GPU and a physical or virtual server
+- At least one NVIDIA L40S GPU and a physical or virtual server. NVIDIA H100 GPU is preferred option.
 - NVIDIA AI Enterprise license or developer credentials to run NVIDIA NIM containers
 
 ## Getting started
 
-A compatible server with at least one L40S GPU is required. For development and testing we used the services of [DataCrunch](http://www.datacrunch.io). NVIDIAs cloud service [Brev](https://brev.nvidia.com/) is an easy option, although it is a bit on the expensive side and does not offer customization options for the runtime environment etc. as DataCruch for example does.
+A compatible server with at least one L40S GPU (or H100 GPU) is required. For development and testing we used the services of [Verda](http://www.verda.com) (previously DataCrunch). NVIDIAs cloud service [Brev](https://brev.nvidia.com/) is an easy option, although it is a bit on the expensive side and does not offer customization options for the runtime environment etc. as Verda for example does.
 
-We deployend a virtual Ubuntu Linux instance to DataCrunch and wrote our code with Visual Studio code Remote Server connection to the instance. This worked well. Deploy your instance preferably using generated SSH keys and configure your ~/.ssh/config file as follows:
+We deployend a virtual Ubuntu Linux instance to Verda and wrote our code with Visual Studio code Remote Server connection to the instance. This worked well. Deploy your instance preferably using generated SSH keys and configure your ~/.ssh/config file as follows:
 
 ```bash
 Host <the ip/hosthame of your instance>
         HostName <the ip/hosthame of your instance>
-        IdentityFile=<your home dir>/.ssh/id_ed25519_datacrunch
+        IdentityFile=<your home dir>/.ssh/id_ed25519_verda
         User root
 ```
 
@@ -43,7 +43,7 @@ After this you may connect to the ip/hostname of instance with Visual Studio cod
 The container images should download and the containers start. After a successful start, open SSH tunnels from your local machine:
 
 ```bash
-> ssh -i ~/.ssh/id_ed25519_datacrunch -L 3000:localhost:3000 -L 9091:localhost:9091 -L 5001:localhost:5001 root@<the ip/hosthame of your instance>
+> ssh -i ~/.ssh/id_ed25519_verda -L 3000:localhost:3000 -L 9091:localhost:9091 -L 5001:localhost:5001 root@<the ip/hosthame of your instance>
 ```
 
 The Open WebUI interface should now be accessible at *http://localhost:3000*. On the first login, create an administrator account.
@@ -53,12 +53,15 @@ The system should now be ready to test. For the full capability some customizati
 After use, you may stop the services by running the shutdown script at the remote server:
 
 ```bash
-./deploy_rag_openwebui.sh
+./shutdown_rag_openwebui.sh
 ```
 
 You may monitor the system usage, especially RAM and GPU memory consumption with *htop* and *nvidia-smi*.
 
 ## Configuration
+
+Administration instructions can be found in file "readme_user_instructions.pdf" that was delivered separately.
+
 
 ### Adding users, groups and giving access to models
 
@@ -68,6 +71,7 @@ Next, click again the user menu at lower left, click *Settings* and *Admin Setti
 
 The user(s) belonging to *RAG users* should now be able to use the installed models.
 
+
 ### Setting the system parameters for document processing
 
 Unfortunately not all parameters can be set using system variables and some need tweaking using the user interface.
@@ -76,25 +80,25 @@ Unfortunately not all parameters can be set using system variables and some need
 
 Click user menu lower left, select *Settings* and *Admin Settings*. Change context extraction engine to *Docling* and check that the address of the engine is set to *http://docling:5001*. Put the address in the box if necessary.
 
-Next set Text splitter chuck size to 400 and chunk overlap to 100 if not set by default. This improves the robustness of information retrieval. Exceeding a chunk size of 400 may cause silent errors due to internal configuration constraints.
+Next set Text splitter chuck size to 500 and chunk overlap to 125 if not set by default. This improves the robustness of information retrieval. Exceeding a chunk size of 500 may cause silent errors due to internal configuration constraints.
 
 Check that *Embedding Model Engine* is set to *OpenAI* and the address is *http://nim-proxy:8020/v1*. *API Key* can be anything, *abcd* for example. *Embedding Model* should say *nvidia/nv-embedqa-e5-v5*.
 
 Finally, set the reranking model. Enable *Hybrid Search*. Select *Reranking Engine* and choose *External*, for *Reranking Engine* type *http://nim-proxy:8020/v1/ranking*, for *API Key* type anything, *abcd*, for example and to *Reranking Model* type *nvidia/nv-rerankqa-mistral-4b-v3*.
 
-Click *Save* to apply the changes and check for any error messages. The final settings should look like this:
+Click *Save* to apply the changes and check for any error messages. The final settings should look like screenshots found in "readme_user_instructions.pdf".
 
-[Setup for document content extraction](./pics/doc_processing_settings.png)
 
 ### Setting context length and token limits
 
 Context length determines how much conversation history the model retains. While larger context windows provide more memory, they also increase GPU memory consumption and may reduce model accuracy beyond a certain point. Every model has a maximum context length, although using the max length is not always optimal. The model usually starts forgetting things when using excessively long context lengths. Context length also consumes GPU memory.
 
-In our tests we used context length of 8192. With bigger and more capable GPU (upgrade from NVIDIA L40S) the context length can be longer.
+In our tests we used context lengths of 8192 to 60000. With bigger and more capable GPU (upgrade from NVIDIA L40S) the context length can be longer (but not longer than what the language model can accommodate, in our case 120000).
 
 Use chat settings on the respective discussion to increase model context length. Context length is the amount of tokens given to the Ollama model used. Max Tokens is the maximum length of the answer.
 
-[Setup for token lengths](./pics/chat_token_length.png)
+Again, more explanation on these parameters can be found in separate document "readme_user_instructions.pdf".
+
 
 ## What is RAG and how to use it in this pilot
 
@@ -112,6 +116,7 @@ Due to the current limitations with [NVIDIA RAG Blueprint] components we decided
 
 For this use case we used the abovementioned NVIDIA Blueprint to build an enterprise RAG pipeline. However, many language-model components or the pipeline could be under Meta LLama Community License Agreement (various versions) that limits their use in certain purposes [Llama 3.3. acceptable use](https://www.llama.com/llama3_3/use-policy/). NVIDIA Llama derived models however do not necessary refer to Llama Community License Agreement. You may check this at [NVIDIA NGC Catalog](https://catalog.ngc.nvidia.com/). For example, some Nemotron models do not refer to the Llama Community License, Llama-3.1-Nemotron-Nano-8B-v1 for example, and some including Llama-3.3-nemotron-super-49b-v1.5 do. [NVIDIA Software License Agreement](https://www.nvidia.com/en-us/agreements/enterprise-software/nvidia-software-license-agreement/) and other NVIDIA agreements regarding use.
 
+
 ## About system variables and .env
 
 The application and underlying microarchitecture take a fair bit of settings. We have collected them to .env.template. For the deployment one should fill the missing bits with values that the deployment needs and save the result as .env-file. **One should not push the .env file to a repository.** .env file has potentially confidential information including API keys.
@@ -122,6 +127,7 @@ In short, the .env file specifies model versions, service addresses, and runtime
 
 The current environments are mostly collected to the .env(.template), but some are still hardcoded to deployment file (docker-compose) in *./deploy/compose*. This is true especially with *./deploy/compose/openwebui.yaml* that controls the Open WebUI setup.
 
+
 ## Integrating Open WebUI
 
 Open WebUI works as standalone UI. So far we have not made any code changes to the native release. In Open WebUI we have configured which services to use including context extraction engine components and the base Ollama hosted language models.
@@ -130,27 +136,36 @@ Open WebUI uses OpenAI APIs to interact with other services. These are not entir
 
 Open WebUI also offers a licensed enterprise version with potential to hardening and customization.
 
+
 ## Integrating Docling
 
-[Docling](https://github.com/docling-project/docling) is an IBM-driven OSS initiative for better document understanding. In this implementation docling bypasses NVIDIA’s built-in document intelligence components such as NeMo Retrievers and Paddle OCR. This decision was made firstly because Docling is easy to deploy stand-alone and then integrate that to Open WebUI RAG functionality. Secondly the NVIDIA document intelligence currently uses language models with licensing restriction. As such the NVIDIA document intelligence appears capable and fast. Should it become more easy to integrate and license concerns potentially easier, it could be considered as an option in the future.
+[Docling](https://github.com/docling-project/docling) is an IBM-driven Open Source initiative for better document understanding. In this implementation docling bypasses NVIDIA’s built-in document intelligence components such as NeMo Retrievers and Paddle OCR. This decision was made firstly because Docling is easy to deploy stand-alone and then integrate that to Open WebUI RAG functionality. Secondly the NVIDIA document intelligence currently uses language models with licensing restriction. As such the NVIDIA document intelligence appears capable and fast. Should it become more easy to integrate and license concerns potentially easier, it could be considered as an option in the future.
 
-Currently, Docling’s CPU implementation is single-threaded and relatively slow. The DOCLING_SERVE_MAX_SYNC_WAIT=600 limit is often exceeded without propagating errors back to Open WebUI, resulting in apparent infinite loops. For user this shows as an eternal processing loop that need to be cancelled manually. It should be considered if there is GPU memory budget to move to GPU-implementation of Docling. There might still be optimizations not fully explored as well. Currently Docling performance is borderline defective.
+Docling has been setup to utilize GPU. It can run on CPU only but is single-threaded and relatively slow. We highly recommend running Docling in GPU mode!
+
+The default DOCLING_SERVE_MAX_SYNC_WAIT=600 limit is often exceeded without propagating errors back to Open WebUI, resulting in apparent infinite loops. For user this shows as an eternal processing loop that need to be cancelled manually. For this reason we have lifted the value to 7200 and max out the Docling worker threads to 8. There might still be optimizations not fully explored as well.
 
 Docling pipeline can be tested with its standalone UI in [http://localhost:5001/ui/](http://localhost:5001/ui/). This is informative for example when tweaking settings for Open WebUI.
 
 So far we have not discovered potential options of document image intelligence options beyond OCR. These include keyword generation and graph extraction or conversion to Mermaid format. These capabilities are developing and one could keep an eye on what is being integrated to both Docling and OpenWebUI.
 
+
 ## Evaluations
 
 It is important to collect feedback to feed the future development of the application and understand user needs. Open WebUI has mechanism for this. Unfortunately by default exposes also the content of the discussion of which the feedback was given. It is undecided how to prevent the chats from being linked to feedback or if there is an option to just leave positive or negative score along with free text. Also one could test if cleaning up the chat database (section "Cleanup" below) sanitizes the feedback from chat contents as well.
+
 
 ## Qualitative testing of RAG
 
 A good RAG system should be effective in retrieving relevant information and forming informative answers based on the information. There are tools such as [Phoenix](https://phoenix.arize.com/) for this. A simple approach is to run a series of documents with predefined questions and manually rank the results. Alternatively the LLM-as-a-judge approach could be used. One could develop a repeatable test pattern and re-run that when testing new configurations for deployment. A simple example of implementation is available in *./testing*.
 
-## Docling performance testing
 
-TODO: Explain how to performance test Docling APIs and potentially other functionality.
+## Performance testing
+
+We have done some automated performance testing on L40S GPU hardware to make above optimizations (on Docling especially). We used [Locust](https://locust.io/) as our testing tool to find limitations for concurrent users, size and amount of documents etc. Running one L40S or H100 GPU should be able to host a handful of active users just fine - even more if usage is less active.
+
+Based on the performance testing, we also decided to focus on the text (and tables) content of the uploaded files and for now skipped any embedded images in the documents.
+
 
 ## Cleanup
 
@@ -160,28 +175,30 @@ Open WebUI leaves dropped documents in as temporary files in the server. Milvus 
 docker compose -f deploy/compose/cleanup.yaml up -d --build
 ```
 
-The cleanup script drops tables from the [Open WebUI Internal SQLite Database](https://docs.openwebui.com/tutorials/tips/sqlite-database#user-table).
-
+The cleanup script
+* Drops tables from the [Open WebUI Internal SQLite Database](https://docs.openwebui.com/tutorials/tips/sqlite-database#user-table).
+* Drops collections from the Milvus vector database
+* Deletes uploaded files from the file system (disk)
 
 Once Open WebUI evolves there might be other locations were chat or document information is left over. One should keep an eye for these potential leak points.
+
 
 ## Enabling vLLM
 
 vLLM is an optimized model serving library that can improve performance and memory usage when running large language models. In our deployment vLLM is included but commented out. To enable it, follow these steps:
-Uncomment the vLLM service in the *deploy/compose/openwebui.yaml* file by removing the `#` characters before the lines ENABLE_OPENAI_API and OPENAI_API_BASE_URL environment variables. Some models need HUGGING_FACE_HUB_TOKEN environment variable in *.env* file.
+* Uncomment the vLLM service in the *deploy/compose/openwebui.yaml* file by removing the `#` characters before the lines ENABLE_OPENAI_API and OPENAI_API_BASE_URL environment variables. Some models need HUGGING_FACE_HUB_TOKEN environment variable in *.env* file.
+* Uncomment the vLLM service deploy also in deploy_rag_openwebui.sh script and shutdown_rag_openwebui.sh script. There is also a separate deploy_vLLM.sh script that can be used to deploy only vLLM service if needed.
+* Check from Open WebUI admin settings that in *Settings -> Admin Settings -> Connections* the OPENAI API is enabled and Manage OpenAI API Connections is set to http://vllm:8080/v1.
 
-Uncomment the vLLM service deploy also in deploy_rag_openwebui.sh script and shutdown_rag_openwebui.sh script. There is also a separate deploy_vLLM.sh script that can be used to deploy only vLLM service if needed.
+If you use both ollama and vLLM, memory usage can be an issue if you are using non-quantized models. Consider using quantized models in vLLM to reduce memory consumption. For example gemma-3-12b model takes 57GB of GPU memory in non-quantized form if run in vLLM.
 
-Check from Open WebUI admin settings that in *Settings -> Admin Settings -> Connections* the OPENAI API is enabled and Manage OpenAI API Connections is set to http://vllm:8080/v1.
 
-If you use both ollama and vLLM, memory usage can be an issue if you are using non- quantized models. Consider using quantized models in vLLM to reduce memory consumption.
-For example gemma-3-12b model takes 57GB of GPU memory in non-quantized form if run in vLLM.
+## Security
 
-## Troubleshooting and potential pain points
+We expect that the organization installing this solution will provide a HTTPS reverse proxy (TLS endpoint) to enable encrypted https communication. Currently Open WebUI is service un-encrypted in port 3000.
 
-- RAG may not always see the offered content. [Open WebUI Troubleshooting RAG](https://docs.openwebui.com/troubleshooting/rag/) might have suggestions.
-- Docling performance and DOCLING_SERVE_MAX_SYNC_WAIT=600. The Open WebUI does not expose the status nor recovery properly. 
-- Capability of the OCR pipeline in detecting text from images. The reliability of this has not been thoroughly tested.
+We have included basic Nginx setup if we need to setup our own TLS proxy and certificates. But we highly recommend using organizations centralized solution for encryption.
+
 
 ## Future considerations
 
@@ -196,7 +213,6 @@ For example gemma-3-12b model takes 57GB of GPU memory in non-quantized form if 
 - Agentic workflows are taking over the workflows. [NVIDIA Safety for Agentic AI](https://build.nvidia.com/nvidia/safety-for-agentic-ai), [NVIDIA Build an AI Agent for Enterprise Research](https://build.nvidia.com/nvidia/aiq)
 - How to collect and analyze feedback safely without exposing the discussions of the users. This critical for further development
 - What is the delivery model, acceptable level of reliability 
-- Integrate to organization HTTPS proxy
 - Use organization authentication, OAUTH, and especially [Azure AD Domain Services LDAPS](https://docs.openwebui.com/tutorials/offline-mode)
 - Cross-check against the [Open WebUI offline mode instructions](https://docs.openwebui.com/tutorials/offline-mode)
 - RAG system prompt update and enhancement. Which language(s) should one use, for example?
@@ -204,14 +220,14 @@ For example gemma-3-12b model takes 57GB of GPU memory in non-quantized form if 
 
 ## Misc
 
+Open WebUI main application is available at http://localhost:3000/
 Docling Serve web UI is available at http://localhost:5001/ui/
 Milvus management interface is available at http://localhost:9091/webui/
 
+
 ## TODO
 
-- https reverse proxy implementation
-- Automatic cleanup / trash collection, to run every night midnight forced and perhaps more frequently sensing which users are active and only cleaning closed sessions. Logout trigger might be possible as well
-- Milvus cluster ETCD metastore at http://127.0.0.1:2379 reports Unhealthy status
-- Change all log levels to minimum, maybe "ERROR" or "WARNING"/"WARN"
-- Deploy milvus to GPU if better GPU (more memory) is available
-- Deploy Docling to GPU if better GPU (more memory). Maybe switch to H100 and offload Docling to GPUs.
+- HTTPS reverse proxy implementation.
+- Enhance cleanup process and automate it with cron. Also try sensing which users are active and only cleaning closed sessions. Logout trigger might be possible as well.
+- Milvus cluster ETCD metastore at http://127.0.0.1:2379 reports Unhealthy status.
+- Deploy milvus to GPU if better GPU (more memory) is available.
